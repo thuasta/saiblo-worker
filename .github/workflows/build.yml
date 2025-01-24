@@ -1,16 +1,20 @@
 on:
-  push:
   pull_request:
+  push:
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
 
 jobs:
-  docker:
+  build-docker-image:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: docker/build-push-action@v6
 
-  black:
+  check-style:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,10 +23,14 @@ jobs:
         with:
           options: "--check --verbose"
 
-  pylint:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - run: |
           python -m pip install --upgrade pip

@@ -5,10 +5,8 @@ labels: ["bug"]
 body:
   - type: textarea
     attributes:
-      label: Describe the bug (Do NOT report security vulnerabilities here!)
-      description: |
-        A clear and concise description of what the bug is.
-        (To report security vulnerabilities, please contact with developers individually.)
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
     validations:
       required: true
 
