@@ -1,14 +1,17 @@
 """Contains the judger class implemented for THUAI matches."""
 
-from base_match_judger import BaseMatchJudger
-from match_result import MatchResult
 from typing import List, Dict
 from pathlib import Path
-import docker
-import random, string
-from docker.types import Mount
+import random
+import string
 import asyncio
 import json
+
+import docker
+from docker.types import Mount
+
+from base_match_judger import BaseMatchJudger
+from match_result import MatchResult
 
 
 JUDGER_NAME_LENGTH = 10
@@ -16,25 +19,27 @@ AGENT_CONTAINER_NAME_PREFIX = "THUAI_agent_"
 SERVER_CONTAINER_NAME_PREFIX = "THUAI_server_"
 NETWORK_NAME_PREFIX = "THUAI_network_"
 
-JUDGE_TIMEOUT = 600 # In seconds
+JUDGE_TIMEOUT = 600  # In seconds
+
 
 class JudgeTimeoutException(Exception):
+    """Exception class for Judge timeout"""
+
     def __init__(self):
-        super().__init__()
+        pass
+
 
 class ThuaiJudger(BaseMatchJudger):
     """The Judger implemented for THUAI judgement work."""
 
     def __init__(self):
-        """Initialize the judger
-        """
+        """Initialize the judger."""
         self.client = docker.from_env()
-        self.judges = dict()
-        self.containers = []
+        self.judges = {}
 
         # Generate a random string for the judger, to avoid name conflict
         chars = string.ascii_letters + string.digits
-        self.name = ''.join(random.choice(chars) for _ in range(JUDGER_NAME_LENGTH))
+        self.name = "".join(random.choice(chars) for _ in range(JUDGER_NAME_LENGTH))
 
         # IDs for the resources, to avoid name conflict
         self.agent_id = 0
@@ -42,15 +47,15 @@ class ThuaiJudger(BaseMatchJudger):
         self.network_id = 0
 
         # Record resources held by each judge.
-        self.judge_containers : Dict[str, List[str]] = dict()
-        self.judge_networks : Dict[str, List[str]] = dict()
-    
+        self.judge_containers: Dict[str, List[str]] = {}
+        self.judge_networks: Dict[str, List[str]] = {}
+
     async def judge(
         self, match_id: str, game_host_image_tag: str, agent_image_tags: List[str]
     ) -> MatchResult:
-        
+
         # If not judged before...
-        if match_id not in self.judges.keys():
+        if match_id not in self.judges:
             try:
                 # Judge and memorize the result.
 
@@ -73,9 +78,18 @@ class ThuaiJudger(BaseMatchJudger):
 
                     # Agent Container
                     container_name = self.get_name("agent")
-                    self.client.containers.run(agent_image_tag, [
-                        "--token", str(token), "--server", f"ws://{server_name}:14514"
-                    ], network=network_name, detach=True, name=container_name)
+                    self.client.containers.run(
+                        agent_image_tag,
+                        [
+                            "--token",
+                            str(token),
+                            "--server",
+                            f"ws://{server_name}:14514",
+                        ],
+                        network=network_name,
+                        detach=True,
+                        name=container_name,
+                    )
                     self.judge_containers[match_id].append(container_name)
 
                     token = token + 1
@@ -90,7 +104,7 @@ class ThuaiJudger(BaseMatchJudger):
                     ports={"14514/tcp": 14514},
                     mounts=[server_mount],
                     detach=True,
-                    name=server_name
+                    name=server_name,
                 )
 
                 for network in self.judge_networks[match_id]:
@@ -113,7 +127,7 @@ class ThuaiJudger(BaseMatchJudger):
             except Exception:
                 self.stop_judge(match_id)
                 raise
-        
+
         return self.judges[match_id]
 
     async def wait_container(self, container_name: str):
@@ -126,8 +140,8 @@ class ThuaiJudger(BaseMatchJudger):
 
     async def list(self) -> Dict[str, MatchResult]:
         return self.judges.copy()
-    
-    async def force_kill(self, match_id, waiting: int=JUDGE_TIMEOUT) -> None:
+
+    async def force_kill(self, match_id, waiting: int = JUDGE_TIMEOUT) -> None:
         """Force stop a match and throw an exception.
 
         Args:
@@ -140,7 +154,7 @@ class ThuaiJudger(BaseMatchJudger):
         await asyncio.sleep(waiting)
         self.stop_judge(match_id)
         raise JudgeTimeoutException
-    
+
     def stop_judge(self, match_id: str) -> None:
         """Stop a judge and release its resources
 
@@ -150,12 +164,12 @@ class ThuaiJudger(BaseMatchJudger):
             match_id (str): The match to stop.
         """
 
-        if match_id in self.judge_containers.keys():
+        if match_id in self.judge_containers:
             for container in self.judge_containers[match_id]:
                 self.client.containers.get(container).kill()
             self.judge_containers.pop(match_id)
 
-        if match_id in self.judge_networks.keys():
+        if match_id in self.judge_networks:
             for network in self.judge_networks[match_id]:
                 self.client.networks.get(network).remove()
             self.judge_networks.pop(match_id)
@@ -169,11 +183,14 @@ class ThuaiJudger(BaseMatchJudger):
         Returns:
             int: The player id
         """
-        with open(Path(self.get_name("record", match_id)) / "result.json", 'r') as f:
+        with open(
+            Path(self.get_name("record", match_id)) / "result.json",
+            "r",
+            encoding="utf-8",
+        ) as f:
             return int(json.load(f)["winner"])
 
-
-    def get_name(self, type: str, match_id="") -> str:
+    def get_name(self, resource_type: str, match_id="") -> str:
         """Generates a no-duplicate name for containers and networks.
 
         Name format: THUAI_{type}_{judger_name}_{id} (except for "record")
@@ -183,26 +200,24 @@ class ThuaiJudger(BaseMatchJudger):
 
         Args:
             type (str): Should be "agent", "server", "record" or "network".
-        
+
         Returns:
             The name.
 
         Raises:
             ValueError: If type is illegal.
         """
-        if type == "agent":
-            name = AGENT_CONTAINER_NAME_PREFIX + self.name + '_' + str(self.agent_id)
+        if resource_type == "agent":
+            name = AGENT_CONTAINER_NAME_PREFIX + self.name + "_" + str(self.agent_id)
             self.agent_id = self.agent_id + 1
-        elif type == "server":
-            name = SERVER_CONTAINER_NAME_PREFIX + self.name + '_' + str(self.server_id)
+        elif resource_type == "server":
+            name = SERVER_CONTAINER_NAME_PREFIX + self.name + "_" + str(self.server_id)
             self.server_id = self.server_id + 1
-        elif type == "network":
-            name = NETWORK_NAME_PREFIX + self.name + '_' + str(self.network_id)
+        elif resource_type == "network":
+            name = NETWORK_NAME_PREFIX + self.name + "_" + str(self.network_id)
             self.network_id = self.network_id + 1
-        elif type == "record":
+        elif resource_type == "record":
             name = str(Path.cwd() / "record" / self.name / match_id)
-            pass
         else:
             raise ValueError
         return name
-    
