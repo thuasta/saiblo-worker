@@ -33,7 +33,7 @@ class BuildTask(BaseTask):
             The tag of the built image
         """
         tar_file_path = await self._fetcher.fetch(self._code_id)
-        self._result = await self._builder.build(tar_file_path)
+        self._result = await self._builder.build(tar_file_path, self._code_id)
         return self._result
 
     @property

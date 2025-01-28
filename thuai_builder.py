@@ -35,7 +35,19 @@ class ThuaiBuilder(BaseDockerImageBuilder):
         # if not built yet...
         if code_id not in built_image_tags:
             # print(f"Building image {code_id} from {file_path}")
-            self.client.images.build(path=str(file_path), tag=code_id, rm=True)
+            try:
+                self.client.images.build(path=str(file_path), tag=code_id, rm=True)
+            except docker.errors.BuildError as e:
+                error_logs = e.build_log
+                error_msg = ""
+                for log in error_logs:
+                    log_line = log.get("stream", "")
+                    # if 'error' in log_line:
+                    #     error_msg += log_line
+                    error_msg += log_line
+                print(error_msg)
+                return f"E:{error_msg}"
+            
         
         self.built_images[file_path] = code_id
 
