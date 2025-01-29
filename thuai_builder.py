@@ -1,5 +1,6 @@
 """Contains docker image build for THUAI."""
 
+import asyncio
 from typing import Dict
 from pathlib import Path
 import string
@@ -25,6 +26,10 @@ class ThuaiBuilder(BaseDockerImageBuilder):
 
         # # ID for image, to avoid name conflict
         # self.image_id = 0
+    
+    def _build_image(self, file_path: Path, code_id: str):
+        """Block in a separate thread to build Docker image."""
+        self.client.images.build(path=str(file_path), tag=code_id, rm=True)
 
     async def build(self, file_path: Path, code_id: str) -> str:
         # get all image tags
@@ -36,7 +41,7 @@ class ThuaiBuilder(BaseDockerImageBuilder):
         if code_id not in built_image_tags:
             # print(f"Building image {code_id} from {file_path}")
             try:
-                self.client.images.build(path=str(file_path), tag=code_id, rm=True)
+                await asyncio.to_thread(self._build_image, file_path, code_id)
             except docker.errors.BuildError as e:
                 error_logs = e.build_log
                 error_msg = ""
@@ -45,7 +50,7 @@ class ThuaiBuilder(BaseDockerImageBuilder):
                     # if 'error' in log_line:
                     #     error_msg += log_line
                     error_msg += log_line
-                print(error_msg)
+                # print(error_msg)
                 return f"E:{error_msg}"
             
         
