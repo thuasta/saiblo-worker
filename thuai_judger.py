@@ -68,13 +68,36 @@ class ThuaiJudger(BaseMatchJudger):
 
                 token = 0
 
+                print(
+                    f"Starting Server {server_name} with image {game_host_image_tag}."
+                )
+
+                # Run server container.
+                record_folder = self.get_name("record", match_id)
+                Path(record_folder).mkdir(parents=True)
+                server_mount = Mount("/record", record_folder, type="bind")
+
+                self.client.containers.run(
+                    game_host_image_tag,
+                    # ports={"14514/tcp": 14514},
+                    remove=True,
+                    mounts=[server_mount],
+                    detach=True,
+                    name=server_name,
+                )
+
+                print(
+                    f"Server {server_name} is running with image {game_host_image_tag}."
+                )
+
                 # Run agent containers, create networks
                 for agent_image_tag in agent_image_tags:
 
                     # Network
                     network_name = self.get_name("network")
-                    self.client.networks.create(network_name)
+                    agent_network = self.client.networks.create(network_name)
                     self.judge_networks[match_id].append(network_name)
+                    agent_network.connect(server_name)
 
                     # Agent Container
                     container_name = self.get_name("agent")
@@ -89,28 +112,16 @@ class ThuaiJudger(BaseMatchJudger):
                         network=network_name,
                         detach=True,
                         name=container_name,
+                        remove=True,
                     )
                     self.judge_containers[match_id].append(container_name)
 
                     token = token + 1
 
-                # Run server container.
-                record_folder = self.get_name("record", match_id)
-                Path(record_folder).mkdir(parents=True)
-                server_mount = Mount("/record", record_folder, type="bind")
+                # for network in self.judge_networks[match_id]:
+                #     self.client.networks.get(network).connect(server_name)
 
-                self.client.containers.run(
-                    game_host_image_tag,
-                    ports={"14514/tcp": 14514},
-                    mounts=[server_mount],
-                    detach=True,
-                    name=server_name,
-                )
-
-                for network in self.judge_networks[match_id]:
-                    self.client.networks.get(network).connect(server_name)
-
-                task_server_run = asyncio.create_task(self.wait_container(server_name))
+                task_server_run = asyncio.to_thread(self.wait_container, server_name)
                 task_force_kill = asyncio.create_task(self.force_kill(match_id))
 
                 await task_server_run
@@ -119,8 +130,9 @@ class ThuaiJudger(BaseMatchJudger):
 
                 winner = self.get_winner(match_id)
                 scores = [1.0 if i == winner else 0.0 for i in range(token)]
+                record_file_path = Path(record_folder) / "record.dat"
 
-                self.judges[match_id] = MatchResult(match_id, scores)
+                self.judges[match_id] = MatchResult(match_id, scores, record_file_path)
 
                 task_force_kill.cancel()
 
@@ -130,7 +142,7 @@ class ThuaiJudger(BaseMatchJudger):
 
         return self.judges[match_id]
 
-    async def wait_container(self, container_name: str):
+    def wait_container(self, container_name: str):
         """Wait before a detached container finishes running.
 
         Args:
