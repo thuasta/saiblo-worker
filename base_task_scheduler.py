@@ -9,7 +9,7 @@ from base_task import BaseTask
 
 class BaseTaskScheduler(ABC):
     """Abstract base class for task schedulers."""
-    
+
     @abstractmethod
     def can_accept_judge_task(self) -> bool:
         """Check if the scheduler can accept a new judge task.
@@ -18,7 +18,7 @@ class BaseTaskScheduler(ABC):
             True if the scheduler can accept a new judge task, False otherwise
         """
         raise NotImplementedError
-    
+
     @abstractmethod
     def get_finished_judge_tasks_queue(self) -> asyncio.Queue:
         raise NotImplementedError

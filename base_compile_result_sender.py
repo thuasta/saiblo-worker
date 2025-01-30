@@ -2,11 +2,12 @@
 
 from abc import ABC, abstractmethod
 
+
 class BaseCompileResultSender(ABC):
     """Abstract base class for compile result senders."""
 
     @abstractmethod
-    async def send(self, status: bool, message: str) -> None:
+    async def send(self, code_id: str, status: bool, message: str) -> None:
         """Send the result of a compile.
 
         Args:

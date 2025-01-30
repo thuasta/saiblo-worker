@@ -41,7 +41,7 @@ class CompileTask(BaseTask):
         """
 
         compile_result = await self._build_task.execute()
-        if compile_result.split(":")[0]=='E':
+        if compile_result.split(":")[0] == "E":
             self._result = compile_result[2:]
             await self._sender.send(self._code_id, False, self._result)
             return compile_result[2:]

@@ -12,9 +12,10 @@ from match_result import MatchResult
 COMPILATION_TASK_PARALLELISM = 5
 JUDGE_TASK_PARALLELISM = 1
 
+
 class ThuaiTaskScheduler(BaseTaskScheduler):
     """Concrete implementation of a task scheduler."""
-    
+
     _compilation_tasks: Dict[str, CompileTask]
     _judge_tasks: Dict[str, JudgeTask]
     _compilation_tasks_queue: asyncio.Queue
@@ -22,7 +23,6 @@ class ThuaiTaskScheduler(BaseTaskScheduler):
     _compilation_tasks_loop: asyncio.Task
     _judge_tasks_loop: asyncio.Task
     _finished_judge_tasks: asyncio.Queue
-    
 
     def __init__(self) -> None:
         """Initialize the task scheduler."""
@@ -31,9 +31,9 @@ class ThuaiTaskScheduler(BaseTaskScheduler):
         self._compilation_tasks_queue = asyncio.Queue()
         self._judge_tasks_queue = asyncio.Queue()
         self._finished_judge_tasks = asyncio.Queue()
-    
+
     def can_accept_judge_task(self) -> bool:
-        return self._judge_tasks_queue.qsize() < JUDGE_TASK_PARALLELISM*2
+        return self._judge_tasks_queue.qsize() < JUDGE_TASK_PARALLELISM * 2
 
     async def clean(self) -> None:
         """Cleans up scheduled tasks."""
@@ -63,8 +63,10 @@ class ThuaiTaskScheduler(BaseTaskScheduler):
             raise ValueError("Invalid task type.")
         print("Scheduled task: {}".format(task_id))
         return task_id
-    
-    async def task_loop(self, scheduled_tasks_queue: asyncio.Queue, task_parallelism: int) -> None:
+
+    async def task_loop(
+        self, scheduled_tasks_queue: asyncio.Queue, task_parallelism: int
+    ) -> None:
         """Loop for executing compilation tasks."""
         print("Task loop started.")
         while True:
@@ -88,13 +90,17 @@ class ThuaiTaskScheduler(BaseTaskScheduler):
                     print("Task {} finished.".format(task_result.match_id))
                     if task_result:
                         self._finished_judge_tasks.put_nowait(task_result.match_id)
-                        
+
     def get_finished_judge_tasks_queue(self) -> asyncio.Queue:
         return self._finished_judge_tasks
 
     async def start(self) -> None:
         """Starts the task scheduler and begins executing tasks."""
-        self._compilation_tasks_loop = asyncio.create_task(self.task_loop(self._compilation_tasks_queue, COMPILATION_TASK_PARALLELISM))
-        self._judge_tasks_loop = asyncio.create_task(self.task_loop(self._judge_tasks_queue, JUDGE_TASK_PARALLELISM))
+        self._compilation_tasks_loop = asyncio.create_task(
+            self.task_loop(self._compilation_tasks_queue, COMPILATION_TASK_PARALLELISM)
+        )
+        self._judge_tasks_loop = asyncio.create_task(
+            self.task_loop(self._judge_tasks_queue, JUDGE_TASK_PARALLELISM)
+        )
         await self._compilation_tasks_loop
         await self._judge_tasks_loop

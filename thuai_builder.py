@@ -26,16 +26,18 @@ class ThuaiBuilder(BaseDockerImageBuilder):
 
         # # ID for image, to avoid name conflict
         # self.image_id = 0
-    
+
     def _build_image(self, file_path: Path, code_id: str):
         """Block in a separate thread to build Docker image."""
         self.client.images.build(path=str(file_path), tag=code_id, rm=True)
 
     async def build(self, file_path: Path, code_id: str) -> str:
         # get all image tags
-        built_image_tags = [tag.split(':')[0] 
-                                for image in self.client.images.list() 
-                                for tag in image.tags]
+        built_image_tags = [
+            tag.split(":")[0]
+            for image in self.client.images.list()
+            for tag in image.tags
+        ]
         # print(f"Built image tags: {built_image_tags}")
         # if not built yet...
         if code_id not in built_image_tags:
@@ -53,8 +55,7 @@ class ThuaiBuilder(BaseDockerImageBuilder):
                     error_msg += log_line
                 # print(error_msg)
                 return f"E:{error_msg}"
-            
-        
+
         self.built_images[file_path] = code_id
 
         return self.built_images[file_path]

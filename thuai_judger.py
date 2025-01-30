@@ -67,14 +67,16 @@ class ThuaiJudger(BaseMatchJudger):
                 server_name = self.get_name("server")
 
                 token = 0
-                
-                print(f"Starting Server {server_name} with image {game_host_image_tag}.")
+
+                print(
+                    f"Starting Server {server_name} with image {game_host_image_tag}."
+                )
 
                 # Run server container.
                 record_folder = self.get_name("record", match_id)
                 Path(record_folder).mkdir(parents=True)
                 server_mount = Mount("/record", record_folder, type="bind")
-                
+
                 self.client.containers.run(
                     game_host_image_tag,
                     # ports={"14514/tcp": 14514},
@@ -83,8 +85,10 @@ class ThuaiJudger(BaseMatchJudger):
                     detach=True,
                     name=server_name,
                 )
-                
-                print(f"Server {server_name} is running with image {game_host_image_tag}.")
+
+                print(
+                    f"Server {server_name} is running with image {game_host_image_tag}."
+                )
 
                 # Run agent containers, create networks
                 for agent_image_tag in agent_image_tags:
@@ -108,12 +112,11 @@ class ThuaiJudger(BaseMatchJudger):
                         network=network_name,
                         detach=True,
                         name=container_name,
-                        remove=True
+                        remove=True,
                     )
                     self.judge_containers[match_id].append(container_name)
 
                     token = token + 1
-
 
                 # for network in self.judge_networks[match_id]:
                 #     self.client.networks.get(network).connect(server_name)

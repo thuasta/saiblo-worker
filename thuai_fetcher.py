@@ -10,6 +10,7 @@ import shutil
 CODE_INFO_API = "https://api.dev.saiblo.net/judger/codes/{}"
 CODE_DOWNLOAD_API = "https://api.dev.saiblo.net/judger/codes/{}/download"
 
+
 class ThuaiFetcher(BaseAgentCodeFetcher):
     """Fetches agent code for THUAI."""
 
@@ -17,7 +18,6 @@ class ThuaiFetcher(BaseAgentCodeFetcher):
         """Cleans up fetched resources."""
         # remove fetched_codes
         shutil.rmtree("fetched_codes")
-
 
     async def fetch(self, code_id: str) -> Path:
         """Fetches the code for an agent and saves it to a directory(containing the dockerfile)
@@ -47,7 +47,7 @@ class ThuaiFetcher(BaseAgentCodeFetcher):
             zip_file.close()
         else:
             raise Exception("Failed to download code")
-    
+
         return Path(f"fetched_codes/{code_id}")
 
     async def list(self) -> Dict[str, Path]:

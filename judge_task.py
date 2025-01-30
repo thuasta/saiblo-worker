@@ -54,7 +54,7 @@ class JudgeTask(BaseTask):
         agent_image_tags = await asyncio.gather(
             *[t.execute() for t in self._build_tasks]
         )
-        
+
         for tag in agent_image_tags:
             if tag.split(":")[0] == "E":
                 match_result = MatchResult(
@@ -62,7 +62,7 @@ class JudgeTask(BaseTask):
                 )
                 await self._reporter.report(match_result)
                 return match_result
-            
+
         match_result = await self._judger.judge(
             self._match_id, self._game_host_image_tag, agent_image_tags
         )
