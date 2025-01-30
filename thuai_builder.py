@@ -39,9 +39,10 @@ class ThuaiBuilder(BaseDockerImageBuilder):
         # print(f"Built image tags: {built_image_tags}")
         # if not built yet...
         if code_id not in built_image_tags:
-            # print(f"Building image {code_id} from {file_path}")
+            print(f"Building image {code_id} from {file_path}")
             try:
                 await asyncio.to_thread(self._build_image, file_path, code_id)
+                print(f"Image {code_id} built successfully")
             except docker.errors.BuildError as e:
                 error_logs = e.build_log
                 error_msg = ""
