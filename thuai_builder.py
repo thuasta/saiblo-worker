@@ -54,7 +54,7 @@ class ThuaiBuilder(BaseDockerImageBuilder):
                     #     error_msg += log_line
                     error_msg += log_line
                 # print(error_msg)
-                return f"E:{error_msg}"
+                raise Exception(error_msg)
 
         self.built_images[file_path] = code_id
 

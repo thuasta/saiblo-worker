@@ -1,7 +1,6 @@
 import time
 from base_task_scheduler import BaseTaskScheduler
 from build_task import BuildTask
-from compile_task import CompileTask
 from thuai_builder import ThuaiBuilder
 from thuai_cr_sender import ThuaiCRSender
 from thuai_fetcher import ThuaiFetcher
@@ -11,29 +10,6 @@ import asyncio
 
 from thuai_task_scheduler import ThuaiTaskScheduler
 from ws_client import WsClient
-
-
-async def fetch():
-    await ThuaiFetcher().fetch("cbd96c3c5a934e0cabac0a3f006a823b")
-
-
-async def clean():
-    await ThuaiFetcher().clean()
-
-
-async def buildTask():
-    return await BuildTask(
-        "cbd96c3c5a934e0cabac0a3f006a823b", ThuaiFetcher(), ThuaiBuilder()
-    ).execute()
-
-
-async def compileTask():
-    return await CompileTask(
-        "cbd96c3c5a934e0cabac0a3f006a823b",
-        ThuaiFetcher(),
-        ThuaiBuilder(),
-        ThuaiCRSender(),
-    ).execute()
 
 
 async def testWsClient():

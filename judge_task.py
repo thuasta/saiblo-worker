@@ -50,25 +50,27 @@ class JudgeTask(BaseTask):
         Returns:
             The match judge result
         """
-
-        agent_image_tags = await asyncio.gather(
-            *[t.execute() for t in self._build_tasks]
-        )
-
-        for tag in agent_image_tags:
-            if tag.split(":")[0] == "E":
-                match_result = MatchResult(
-                    self._match_id, scores=[0, 0], record_file_path=""
-                )
-                await self._reporter.report(match_result)
-                return match_result
-
-        match_result = await self._judger.judge(
-            self._match_id, self._game_host_image_tag, agent_image_tags
-        )
-        await self._reporter.report(match_result)
-        self._result = match_result
-        return match_result
+        try:
+            agent_image_tags = await asyncio.gather(
+                *[t.execute() for t in self._build_tasks]
+            )
+            match_result = await self._judger.judge(
+                self._match_id, self._game_host_image_tag, agent_image_tags
+            )
+            await self._reporter.report(match_result)
+            self._result = match_result
+            return match_result
+        except Exception as e:
+            # If any build task failed, the match is judged as failed.
+            match_result = MatchResult(
+                match_id=self._match_id, 
+                success=False, 
+                err_msg=str(e),
+                scores=[0] * len(self._build_tasks),
+                record_file_path=None)
+            await self._reporter.report(match_result)
+            self._result = match_result
+            return match_result
 
     @property
     def result(self) -> Optional[MatchResult]:

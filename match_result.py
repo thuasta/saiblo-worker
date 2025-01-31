@@ -1,7 +1,7 @@
 """Contains the match result."""
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -17,5 +17,7 @@ class MatchResult:
     """
 
     match_id: str
+    success: bool
+    err_msg: str
     scores: List[float]
-    record_file_path: str
+    record_file_path: Optional[str]

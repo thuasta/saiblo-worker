@@ -11,7 +11,7 @@ from base_docker_image_builder import BaseDockerImageBuilder
 from base_match_judger import BaseMatchJudger
 from base_match_result_reporter import BaseMatchResultReporter
 from base_task_scheduler import BaseTaskScheduler
-from compile_task import CompileTask
+from build_task import BuildTask
 from judge_task import JudgeTask
 
 HEART_BEAT_INTERVAL = 1
@@ -124,8 +124,11 @@ class WsClient:
             print(data)
             asyncio.run(
                 self._task_scheduler.schedule(
-                    CompileTask(
-                        data["code_id"], self._fetcher, self._builder, self._cr_sender
+                    BuildTask(
+                        code_id=data["code_id"], 
+                        fetcher=self._fetcher, 
+                        builder=self._builder, 
+                        sender=self._cr_sender
                     )
                 )
             )

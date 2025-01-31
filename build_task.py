@@ -3,6 +3,7 @@
 from typing import Optional
 
 from base_agent_code_fetcher import BaseAgentCodeFetcher
+from base_compile_result_sender import BaseCompileResultSender
 from base_docker_image_builder import BaseDockerImageBuilder
 from base_task import BaseTask
 
@@ -14,17 +15,20 @@ class BuildTask(BaseTask):
     _code_id: str
     _fetcher: BaseAgentCodeFetcher
     _result: Optional[str] = None
+    _sender: BaseCompileResultSender
 
     def __init__(
         self,
         code_id: str,
         fetcher: BaseAgentCodeFetcher,
         builder: BaseDockerImageBuilder,
+        sender: BaseCompileResultSender
     ):
         self._code_id = code_id
 
         self._fetcher = fetcher
         self._builder = builder
+        self._sender = sender
 
     async def execute(self) -> str:
         """Runs the task.
@@ -33,7 +37,12 @@ class BuildTask(BaseTask):
             The tag of the built image
         """
         tar_file_path = await self._fetcher.fetch(self._code_id)
-        self._result = await self._builder.build(tar_file_path, self._code_id)
+        try:
+            self._result = await self._builder.build(tar_file_path, self._code_id)
+            await self._sender.send(self._code_id, True, "")
+        except Exception as e:
+            await self._sender.send(self._code_id, False, str(e))
+            raise e
         return self._result
 
     @property
