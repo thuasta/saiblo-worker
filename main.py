@@ -1,4 +1,5 @@
 import time
+from aiohttp_session_manager import AiohttpSessionManager
 from base_task_scheduler import BaseTaskScheduler
 from build_task import BuildTask
 from thuai_builder import ThuaiBuilder
@@ -11,17 +12,19 @@ import asyncio
 from thuai_task_scheduler import ThuaiTaskScheduler
 from ws_client import WsClient
 
+BASE_URL = "https://api.dev.saiblo.net/"
 
 async def testWsClient():
+    http_session = AiohttpSessionManager().get_session(BASE_URL)
     ws_client = WsClient(
         "wss://api.dev.saiblo.net/ws/",
         "thuai8judger",
         ThuaiTaskScheduler(),
-        ThuaiFetcher(),
+        ThuaiFetcher(session=http_session),
         ThuaiBuilder(),
-        ThuaiCRSender(),
+        ThuaiCRSender(session=http_session),
         ThuaiJudger(),
-        ThuaiReporter(),
+        ThuaiReporter(session=http_session),
         "thuai7judger:latest",
     )
     await ws_client.start()

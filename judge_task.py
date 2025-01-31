@@ -41,7 +41,7 @@ class JudgeTask(BaseTask):
         self._reporter = reporter
 
         self._build_tasks = [
-            BuildTask(code_id, fetcher, builder) for code_id in player_code_ids
+            BuildTask(code_id, fetcher, builder, None) for code_id in player_code_ids
         ]
 
     async def execute(self) -> MatchResult:

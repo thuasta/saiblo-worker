@@ -15,14 +15,14 @@ class BuildTask(BaseTask):
     _code_id: str
     _fetcher: BaseAgentCodeFetcher
     _result: Optional[str] = None
-    _sender: BaseCompileResultSender
+    _sender: Optional[BaseCompileResultSender]
 
     def __init__(
         self,
         code_id: str,
         fetcher: BaseAgentCodeFetcher,
         builder: BaseDockerImageBuilder,
-        sender: BaseCompileResultSender
+        sender: BaseCompileResultSender = None
     ):
         self._code_id = code_id
 
@@ -39,9 +39,11 @@ class BuildTask(BaseTask):
         tar_file_path = await self._fetcher.fetch(self._code_id)
         try:
             self._result = await self._builder.build(tar_file_path, self._code_id)
-            await self._sender.send(self._code_id, True, "")
+            if self._sender: 
+                await self._sender.send(self._code_id, True, "")
         except Exception as e:
-            await self._sender.send(self._code_id, False, str(e))
+            if self._sender:
+                await self._sender.send(self._code_id, False, str(e))
             raise e
         return self._result
 

@@ -132,7 +132,13 @@ class ThuaiJudger(BaseMatchJudger):
                 scores = [1.0 if i == winner else 0.0 for i in range(token)]
                 record_file_path = Path(record_folder) / "record.dat"
 
-                self.judges[match_id] = MatchResult(match_id, scores, record_file_path)
+                self.judges[match_id] = MatchResult(
+                    match_id=match_id, 
+                    scores=scores, 
+                    record_file_path=record_file_path,
+                    success=True,
+                    err_msg=""
+                )
 
                 task_force_kill.cancel()
 
