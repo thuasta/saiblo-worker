@@ -158,9 +158,9 @@ class WsClient:
     def on_error(self, ws, error):
         print(error)
 
-    def on_close(self, ws):
+    def on_close(self, ws, close_status_code, close_msg):
         print("### closed ###")
-        # reconnect
+        print("WsClient closed with code: ", close_status_code, " msg: ", close_msg)
 
     def on_open(self, ws):
         print("### opened ###")

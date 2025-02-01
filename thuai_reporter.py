@@ -40,10 +40,10 @@ class ThuaiReporter(BaseMatchResultReporter):
         record_file_path = result.record_file_path
         if not Path(result.record_file_path).exists():
             record_file_path = NO_RECORD_FILE
-            
+        ext=Path(record_file_path).suffix
         with open(record_file_path, "rb") as dat_file:
             # files = {"file": (f"{result.match_id}.dat", dat_file)}
-            data.add_field("file", dat_file, filename=f"{result.match_id}.dat")
+            data.add_field("file", dat_file, filename=f"{result.match_id}.{ext}")
             async with self._session.put(
                 MATCH_REPORT_API.format(result.match_id), data=data
             ) as response:

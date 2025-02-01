@@ -15,28 +15,28 @@ from ws_client import WsClient
 BASE_URL = "https://api.dev.saiblo.net/"
 
 async def testWsClient():
-    http_session = AiohttpSessionManager().get_session(BASE_URL)
-    ws_client = WsClient(
-        "wss://api.dev.saiblo.net/ws/",
-        "thuai8judger",
-        ThuaiTaskScheduler(),
-        ThuaiFetcher(session=http_session),
-        ThuaiBuilder(),
-        ThuaiCRSender(session=http_session),
-        ThuaiJudger(),
-        ThuaiReporter(session=http_session),
-        "thuai7judger:latest",
-    )
-    await ws_client.start()
-    print("WsClient started")
-    # # print('qwdhkdjwqieuo')
-    # time.sleep(10)
-    # # print("qhjdqkjwhdjk")
-    # ws_client.stop()
-    # time.sleep(2)
-    # ws_client.start()
-    # time.sleep(20)
-    # ws_client.stop()
+    async with AiohttpSessionManager().get_session(BASE_URL) as http_session:
+        ws_client = WsClient(
+            "wss://api.dev.saiblo.net/ws/",
+            "thuai8judger",
+            ThuaiTaskScheduler(),
+            ThuaiFetcher(session=http_session),
+            ThuaiBuilder(),
+            ThuaiCRSender(session=http_session),
+            ThuaiJudger(),
+            ThuaiReporter(session=http_session),
+            "thuai7judger:latest",
+        )
+        await ws_client.start()
+        print("WsClient started")
+        # # print('qwdhkdjwqieuo')
+        # time.sleep(10)
+        # # print("qhjdqkjwhdjk")
+        # ws_client.stop()
+        # time.sleep(2)
+        # ws_client.start()
+        # time.sleep(20)
+        # ws_client.stop()
 
 
 async def main():

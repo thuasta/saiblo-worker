@@ -1,6 +1,8 @@
 """Contains docker image build for THUAI."""
 
 import asyncio
+from io import BytesIO
+import tarfile
 from typing import Dict
 from pathlib import Path
 import string
@@ -29,7 +31,12 @@ class ThuaiBuilder(BaseDockerImageBuilder):
 
     def _build_image(self, file_path: Path, code_id: str):
         """Block in a separate thread to build Docker image."""
-        self.client.images.build(path=str(file_path), tag=code_id, rm=True)
+        with open(file_path, "rb") as tar_file:
+            self.client.images.build(fileobj=tar_file,
+                                     custom_context=True, 
+                                     tag=code_id, 
+                                     rm=True)
+            
 
     async def build(self, file_path: Path, code_id: str) -> str:
         # get all image tags
