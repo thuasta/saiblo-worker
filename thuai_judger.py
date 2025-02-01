@@ -1,5 +1,7 @@
 """Contains the judger class implemented for THUAI matches."""
 
+import io
+import tarfile
 from typing import List, Dict
 from pathlib import Path
 import random
@@ -12,6 +14,7 @@ from docker.types import Mount
 
 from base_match_judger import BaseMatchJudger
 from match_result import MatchResult
+from path_manager import get_judge_result_base_dir_path
 
 
 JUDGER_NAME_LENGTH = 10
@@ -47,6 +50,7 @@ class ThuaiJudger(BaseMatchJudger):
         self.network_id = 0
 
         # Record resources held by each judge.
+        self.judge_server: Dict[str, str] = {}
         self.judge_containers: Dict[str, List[str]] = {}
         self.judge_networks: Dict[str, List[str]] = {}
 
@@ -75,16 +79,17 @@ class ThuaiJudger(BaseMatchJudger):
                 # Run server container.
                 record_folder = self.get_name("record", match_id)
                 Path(record_folder).mkdir(parents=True)
-                server_mount = Mount("/record", record_folder, type="bind")
+                # server_mount = Mount("/record", record_folder, type="bind")
 
                 self.client.containers.run(
                     game_host_image_tag,
                     # ports={"14514/tcp": 14514},
-                    remove=True,
-                    mounts=[server_mount],
+                    # remove=True,
+                    # mounts=[server_mount],
                     detach=True,
                     name=server_name,
                 )
+                self.judge_server[match_id] = server_name
 
                 print(
                     f"Server {server_name} is running with image {game_host_image_tag}."
@@ -112,7 +117,7 @@ class ThuaiJudger(BaseMatchJudger):
                         network=network_name,
                         detach=True,
                         name=container_name,
-                        remove=True,
+                        # remove=True,
                     )
                     self.judge_containers[match_id].append(container_name)
 
@@ -181,10 +186,43 @@ class ThuaiJudger(BaseMatchJudger):
         Args:
             match_id (str): The match to stop.
         """
+        if match_id not in self.judge_server:
+            return
+        server_container = self.client.containers.get(self.judge_server[match_id])
+        try:
+            server_container.kill()
+        except Exception as e:
+            print(e)
+        record_tar_stream = server_container.get_archive("/record/")[0]
+        # print(record_tar_file)
+        record_folder = self.get_name("record", match_id)
+        record_tar_buf = io.BytesIO()
+        for chunk in record_tar_stream:
+            record_tar_buf.write(chunk)
+        # record_tar_stream is a multipart encoded file, we need to extract it
+        with tarfile.open(fileobj=io.BytesIO(record_tar_buf.getvalue()), mode="r") as tar:
+            for member in tar.getmembers():
+                split_name = member.name.split("/", 1)
+                if len(split_name) == 1:
+                    continue
+                member.name = split_name[1]
+                tar.extract(member, record_folder)
+        
+        try:
+            server_container.remove()
+        except Exception as e:
+            print(e)
+        
+        self.judge_server.pop(match_id)
 
         if match_id in self.judge_containers:
-            for container in self.judge_containers[match_id]:
-                self.client.containers.get(container).kill()
+            for container_name in self.judge_containers[match_id]:
+                try:
+                    container = self.client.containers.get(container_name)
+                    container.kill()
+                    container.remove()
+                except Exception as e:
+                    print(e)
             self.judge_containers.pop(match_id)
 
         if match_id in self.judge_networks:
@@ -235,7 +273,7 @@ class ThuaiJudger(BaseMatchJudger):
             name = NETWORK_NAME_PREFIX + self.name + "_" + str(self.network_id)
             self.network_id = self.network_id + 1
         elif resource_type == "record":
-            name = str(Path.cwd() / "record" / self.name / match_id)
+            name = str(get_judge_result_base_dir_path() / self.name / match_id)
         else:
             raise ValueError
         return name

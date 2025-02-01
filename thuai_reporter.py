@@ -38,7 +38,7 @@ class ThuaiReporter(BaseMatchResultReporter):
         data.add_field("message", json.dumps(message))
         # check if record file exists using Path.exists()
         record_file_path = result.record_file_path
-        if not Path(result.record_file_path).exists():
+        if not record_file_path or not Path(record_file_path).exists():
             record_file_path = NO_RECORD_FILE
         ext=Path(record_file_path).suffix
         with open(record_file_path, "rb") as dat_file:

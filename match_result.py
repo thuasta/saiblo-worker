@@ -10,6 +10,8 @@ class MatchResult:
 
     Attributes:
         match_id: The match ID
+        success: Whether the match was successfully judged
+        err_msg: An error message if the match was not successfully judged
         scores: A list of scores
             achieved by each agent. The index corresponds to the agent's position in the
             original agent_paths list. Higher scores typically indicate better performance.

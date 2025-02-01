@@ -68,7 +68,7 @@ class ThuaiTaskScheduler(BaseTaskScheduler):
         self, scheduled_tasks_queue: asyncio.Queue, task_parallelism: int
     ) -> None:
         """Loop for executing compilation tasks."""
-        print("Task loop started.")
+        # print("Task loop started.")
         while True:
             tasks: List[BaseTask] = []
             # get the tasks from the queue
