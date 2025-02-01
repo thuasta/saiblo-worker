@@ -2,6 +2,7 @@ import time
 from aiohttp_session_manager import AiohttpSessionManager
 from base_task_scheduler import BaseTaskScheduler
 from build_task import BuildTask
+from match_result import MatchResult
 from thuai_builder import ThuaiBuilder
 from thuai_cr_sender import ThuaiCRSender
 from thuai_fetcher import ThuaiFetcher
@@ -38,9 +39,21 @@ async def testWsClient():
         # time.sleep(20)
         # ws_client.stop()
 
+async def testReporter():
+    async with AiohttpSessionManager().get_session(BASE_URL) as http_session:
+        reporter = ThuaiReporter(session=http_session)
+        match_result = MatchResult(
+            match_id="7716",
+            success=False,
+            scores=[0, 0],
+            err_msg="Test error message",
+            record_file_path="test.dat"
+        )
+        await reporter.report(match_result)
 
 async def main():
     await testWsClient()
+    # await testReporter()
 
 
 if __name__ == "__main__":

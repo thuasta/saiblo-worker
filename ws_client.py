@@ -1,5 +1,6 @@
 import asyncio
 import json
+import signal
 
 # import threading
 from websocket import WebSocketApp
@@ -69,7 +70,7 @@ class WsClient:
         while self._running:
             if self._ws.sock and self._ws.sock.connected:
                 self.send_heart_beat()
-                # print("send heart beat")
+                print("send heart beat")
             await asyncio.sleep(HEART_BEAT_INTERVAL)
             # print(f"keep_alive in: {threading.current_thread().name}")
             # print("thread cnt: ", threading.active_count())
@@ -79,11 +80,11 @@ class WsClient:
             "type": "init",
             "data": {"description": self._judger_name, "address": ""},
         }
-
+        print("send_init")
         self._ws.send(json.dumps(data))
 
     def request_judge_task(self):
-        # print("request_judge_task")
+        print("request_judge_task")
         self._judge_task_receive_flag = False
         data = {"type": "request_judge_task", "data": {"queue": 0}}
         self._ws.send(json.dumps(data))
@@ -161,6 +162,10 @@ class WsClient:
     def on_close(self, ws, close_status_code, close_msg):
         print("### closed ###")
         print("WsClient closed with code: ", close_status_code, " msg: ", close_msg)
+        self._judge_task_receive_flag = True
+        # reconnect
+        if self._running:
+            self._ws.run_forever()
 
     def on_open(self, ws):
         print("### opened ###")
@@ -189,13 +194,17 @@ class WsClient:
         self._keep_report_finished_judge_task = asyncio.create_task(
             self.keep_report_finished_judge_task()
         )
-
-        await self._ws_task
-        await self._task_scheduler_task
-        await self._keep_alive_task
-        await self._keep_request_judge_task
-        await self._keep_report_finished_judge_task
-
+        try:
+            await asyncio.gather(
+                self._ws_task,
+                self._task_scheduler_task,
+                self._keep_alive_task,
+                self._keep_request_judge_task,
+                self._keep_report_finished_judge_task,
+            )
+        except asyncio.CancelledError:
+            print("WsClient cancelled")
+            self.stop()
         # print("start")
 
     def stop(self):

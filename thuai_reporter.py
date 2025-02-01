@@ -26,16 +26,20 @@ class ThuaiReporter(BaseMatchResultReporter):
         print(f"Reporting match result: {result}")
         scores = result.scores
         state = "评测成功"
+        if not result.success:
+            state = "评测失败"
         states = [
-            {"position": i, "status": "OK", "code": 0, "stderr": ""}
+            {"position": i, "status": "OK", "code": 0, "stderr": "No stderr."}
             for i in range(len(scores))
         ]
         message = {}
+        error = result.err_msg
         data = aiohttp.FormData()
         data.add_field("state", state)
         data.add_field("scores", json.dumps(scores))
         data.add_field("states", json.dumps(states))
         data.add_field("message", json.dumps(message))
+        data.add_field("error", error)
         # check if record file exists using Path.exists()
         record_file_path = result.record_file_path
         if not record_file_path or not Path(record_file_path).exists():
