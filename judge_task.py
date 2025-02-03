@@ -60,14 +60,23 @@ class JudgeTask(BaseTask):
             await self._reporter.report(match_result)
             self._result = match_result
             return match_result
+        except asyncio.CancelledError:
+            print("Task cancelled.")
+            self._judger.stop()
+            raise
         except Exception as e:
             # If any build task failed, the match is judged as failed.
             match_result = MatchResult(
-                match_id=self._match_id, 
-                success=False, 
+                match_id=self._match_id,
+                success=False,
                 err_msg=str(e),
                 scores=[0] * len(self._build_tasks),
-                record_file_path=None)
+                record_file_path=None,
+                states=[
+                    {"position": i, "status": "OK", "code": 0, "stderr": ""}
+                    for i in range(len(self._build_tasks))
+                ],
+            )
             await self._reporter.report(match_result)
             self._result = match_result
             return match_result

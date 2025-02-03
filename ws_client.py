@@ -15,7 +15,7 @@ from base_task_scheduler import BaseTaskScheduler
 from build_task import BuildTask
 from judge_task import JudgeTask
 
-HEART_BEAT_INTERVAL = 1
+HEART_BEAT_INTERVAL = 3
 TASK_REQUEST_INTERVAL = 1
 
 
@@ -70,7 +70,7 @@ class WsClient:
         while self._running:
             if self._ws.sock and self._ws.sock.connected:
                 self.send_heart_beat()
-                print("send heart beat")
+                # print("send heart beat")
             await asyncio.sleep(HEART_BEAT_INTERVAL)
             # print(f"keep_alive in: {threading.current_thread().name}")
             # print("thread cnt: ", threading.active_count())
@@ -126,10 +126,10 @@ class WsClient:
             asyncio.run(
                 self._task_scheduler.schedule(
                     BuildTask(
-                        code_id=data["code_id"], 
-                        fetcher=self._fetcher, 
-                        builder=self._builder, 
-                        sender=self._cr_sender
+                        code_id=data["code_id"],
+                        fetcher=self._fetcher,
+                        builder=self._builder,
+                        sender=self._cr_sender,
                     )
                 )
             )
@@ -163,8 +163,12 @@ class WsClient:
         print("### closed ###")
         print("WsClient closed with code: ", close_status_code, " msg: ", close_msg)
         self._judge_task_receive_flag = True
-        # reconnect
-        if self._running:
+        # # reconnect
+        # if self._running:
+        #     self._ws.run_forever()
+    
+    def run_forever(self):
+        while self._running:
             self._ws.run_forever()
 
     def on_open(self, ws):
@@ -181,7 +185,7 @@ class WsClient:
         )
         self._ws.on_open = self.on_open
 
-        self._ws_task = asyncio.to_thread(self._ws.run_forever)
+        self._ws_task = asyncio.to_thread(self.run_forever)
 
         self._task_scheduler_task = asyncio.create_task(self._task_scheduler.start())
 

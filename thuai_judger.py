@@ -1,5 +1,6 @@
 """Contains the judger class implemented for THUAI matches."""
 
+import base64
 import io
 import tarfile
 from typing import List, Dict
@@ -53,6 +54,7 @@ class ThuaiJudger(BaseMatchJudger):
         self.judge_server: Dict[str, str] = {}
         self.judge_containers: Dict[str, List[str]] = {}
         self.judge_networks: Dict[str, List[str]] = {}
+        self.agent_states: Dict[str, List[Dict]] = {}
 
     async def judge(
         self, match_id: str, game_host_image_tag: str, agent_image_tags: List[str]
@@ -66,6 +68,7 @@ class ThuaiJudger(BaseMatchJudger):
                 # Initialize the judge
                 self.judge_containers[match_id] = []
                 self.judge_networks[match_id] = []
+                self.agent_states[match_id] = []
 
                 # Decide name of server.
                 server_name = self.get_name("server")
@@ -128,28 +131,55 @@ class ThuaiJudger(BaseMatchJudger):
 
                 task_server_run = asyncio.to_thread(self.wait_container, server_name)
                 task_force_kill = asyncio.create_task(self.force_kill(match_id))
-
-                await task_server_run
+                try:
+                    await task_server_run
+                except JudgeTimeoutException:
+                    print(f"Timeout: match_id {match_id}")
 
                 self.stop_judge(match_id)
-
-                winner = self.get_winner(match_id)
-                scores = [1.0 if i == winner else 0.0 for i in range(token)]
+                print("Server stopped")
+                success = True
+                try:
+                    winner = self.get_winner(match_id)
+                    print("Winner: ", winner)
+                    scores = [1.0 if i == winner else 0.0 for i in range(token)]
+                except Exception as e:
+                    success = False
+                    print(e)
+                    scores = [0.0] * token
                 record_file_path = Path(record_folder) / "record.dat"
-
+                states = self.agent_states[match_id]
+                # Fill in the missing states
+                for i in range(len(states), token):
+                    states.append(
+                        {
+                            "position": i,
+                            "status": "OK",
+                            "code": 0,
+                            "stderr": "",
+                        }
+                    )  
+                    
+                # print("States: ", states)
                 self.judges[match_id] = MatchResult(
-                    match_id=match_id, 
-                    scores=scores, 
-                    record_file_path=record_file_path,
-                    success=True,
-                    err_msg=""
+                    match_id=match_id,
+                    scores=scores,
+                    record_file_path=str(record_file_path),
+                    success=success,
+                    err_msg="",
+                    states=states,
                 )
 
                 task_force_kill.cancel()
-
-            except Exception:
+            
+            except asyncio.CancelledError:
                 self.stop_judge(match_id)
                 raise
+
+            except Exception as e:
+                self.stop_judge(match_id)
+                print(e)
+                raise e
 
         return self.judges[match_id]
 
@@ -186,6 +216,7 @@ class ThuaiJudger(BaseMatchJudger):
         Args:
             match_id (str): The match to stop.
         """
+        print(f"Stopping judge {match_id}")
         if match_id not in self.judge_server:
             return
         server_container = self.client.containers.get(self.judge_server[match_id])
@@ -200,25 +231,35 @@ class ThuaiJudger(BaseMatchJudger):
         for chunk in record_tar_stream:
             record_tar_buf.write(chunk)
         # record_tar_stream is a multipart encoded file, we need to extract it
-        with tarfile.open(fileobj=io.BytesIO(record_tar_buf.getvalue()), mode="r") as tar:
+        with tarfile.open(
+            fileobj=io.BytesIO(record_tar_buf.getvalue()), mode="r"
+        ) as tar:
             for member in tar.getmembers():
                 split_name = member.name.split("/", 1)
                 if len(split_name) == 1:
                     continue
                 member.name = split_name[1]
                 tar.extract(member, record_folder)
-        
+
         try:
             server_container.remove()
         except Exception as e:
             print(e)
-        
+
         self.judge_server.pop(match_id)
 
         if match_id in self.judge_containers:
-            for container_name in self.judge_containers[match_id]:
+            for i in range(len(self.judge_containers[match_id])):
+                container_name = self.judge_containers[match_id][i]
+                print(f"Stopping container {container_name}")
                 try:
                     container = self.client.containers.get(container_name)
+                    state = {}
+                    state["position"] = i
+                    state["status"] = "OK"
+                    state["code"] = 0
+                    state["stderr"] = base64.b64encode(container.logs()).decode("utf-8")
+                    self.agent_states[match_id].append(state)
                     container.kill()
                     container.remove()
                 except Exception as e:
@@ -277,3 +318,9 @@ class ThuaiJudger(BaseMatchJudger):
         else:
             raise ValueError
         return name
+
+    def stop(self) -> None:
+        print("Stopping judger")
+        judge_server_copy = self.judge_server.copy()
+        for match_id in judge_server_copy:
+            self.stop_judge(match_id)

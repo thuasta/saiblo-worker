@@ -1,3 +1,4 @@
+import base64
 import time
 from aiohttp_session_manager import AiohttpSessionManager
 from base_task_scheduler import BaseTaskScheduler
@@ -15,6 +16,7 @@ from ws_client import WsClient
 
 BASE_URL = "https://api.dev.saiblo.net/"
 
+
 async def testWsClient():
     async with AiohttpSessionManager().get_session(BASE_URL) as http_session:
         ws_client = WsClient(
@@ -29,7 +31,7 @@ async def testWsClient():
             "thuai7judger:latest",
         )
         await ws_client.start()
-        print("WsClient started")
+        # print("WsClient started")
         # # print('qwdhkdjwqieuo')
         # time.sleep(10)
         # # print("qhjdqkjwhdjk")
@@ -39,6 +41,7 @@ async def testWsClient():
         # time.sleep(20)
         # ws_client.stop()
 
+
 async def testReporter():
     async with AiohttpSessionManager().get_session(BASE_URL) as http_session:
         reporter = ThuaiReporter(session=http_session)
@@ -47,9 +50,19 @@ async def testReporter():
             success=False,
             scores=[0, 0],
             err_msg="Test error message",
-            record_file_path="test.dat"
+            record_file_path="test.dat",
+            states=[
+                {
+                    "position": i,
+                    "status": "OK",
+                    "code": 0,
+                    "stderr": base64.b64encode(b"test").decode("utf-8"),
+                }
+                for i in range(2)
+            ],
         )
         await reporter.report(match_result)
+
 
 async def main():
     await testWsClient()

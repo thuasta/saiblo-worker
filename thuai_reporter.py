@@ -11,9 +11,9 @@ NO_RECORD_FILE = "no_record.txt"
 
 class ThuaiReporter(BaseMatchResultReporter):
     """Concrete implementation of BaseMatchResultReporter for THUAI."""
-    
+
     _session: aiohttp.ClientSession
-    
+
     def __init__(self, session: aiohttp.ClientSession):
         self._session = session
 
@@ -28,10 +28,7 @@ class ThuaiReporter(BaseMatchResultReporter):
         state = "评测成功"
         if not result.success:
             state = "评测失败"
-        states = [
-            {"position": i, "status": "OK", "code": 0, "stderr": "No stderr."}
-            for i in range(len(scores))
-        ]
+        states = result.states
         message = {}
         error = result.err_msg
         data = aiohttp.FormData()
@@ -44,7 +41,7 @@ class ThuaiReporter(BaseMatchResultReporter):
         record_file_path = result.record_file_path
         if not record_file_path or not Path(record_file_path).exists():
             record_file_path = NO_RECORD_FILE
-        ext=Path(record_file_path).suffix
+        ext = Path(record_file_path).suffix
         with open(record_file_path, "rb") as dat_file:
             # files = {"file": (f"{result.match_id}.dat", dat_file)}
             data.add_field("file", dat_file, filename=f"{result.match_id}.{ext}")
@@ -52,5 +49,3 @@ class ThuaiReporter(BaseMatchResultReporter):
                 MATCH_REPORT_API.format(result.match_id), data=data
             ) as response:
                 await response.text()
-        
-        
