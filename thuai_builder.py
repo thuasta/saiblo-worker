@@ -32,11 +32,9 @@ class ThuaiBuilder(BaseDockerImageBuilder):
     def _build_image(self, file_path: Path, code_id: str):
         """Block in a separate thread to build Docker image."""
         with open(file_path, "rb") as tar_file:
-            self.client.images.build(fileobj=tar_file,
-                                     custom_context=True, 
-                                     tag=code_id, 
-                                     rm=True)
-            
+            self.client.images.build(
+                fileobj=tar_file, custom_context=True, tag=code_id, rm=True, forcerm=True
+            )
 
     async def build(self, file_path: Path, code_id: str) -> str:
         # get all image tags

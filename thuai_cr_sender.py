@@ -10,9 +10,9 @@ COMPILE_RESULT_API = "/judger/codes/{}/"
 
 class ThuaiCRSender(BaseCompileResultSender):
     """Compile result sender for thuai."""
-    
+
     _session: aiohttp.ClientSession
-    
+
     def __init__(self, session: aiohttp.ClientSession):
         self._session = session
 

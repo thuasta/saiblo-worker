@@ -17,9 +17,9 @@ CODE_DOWNLOAD_API = "/judger/codes/{}/download"
 
 class ThuaiFetcher(BaseAgentCodeFetcher):
     """Fetches agent code for THUAI."""
-    
+
     _session: aiohttp.ClientSession
-    
+
     def __init__(self, session: aiohttp.ClientSession):
         self._session = session
 

@@ -22,7 +22,7 @@ class BuildTask(BaseTask):
         code_id: str,
         fetcher: BaseAgentCodeFetcher,
         builder: BaseDockerImageBuilder,
-        sender: BaseCompileResultSender = None
+        sender: BaseCompileResultSender = None,
     ):
         self._code_id = code_id
 
@@ -39,7 +39,7 @@ class BuildTask(BaseTask):
         tar_file_path = await self._fetcher.fetch(self._code_id)
         try:
             self._result = await self._builder.build(tar_file_path, self._code_id)
-            if self._sender: 
+            if self._sender:
                 await self._sender.send(self._code_id, True, "")
         except Exception as e:
             if self._sender:
