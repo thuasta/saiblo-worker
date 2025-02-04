@@ -159,7 +159,7 @@ class WsClient:
         # print("on message in: ", threading.current_thread().name)
 
     def on_error(self, ws, error):
-        logging.error("WsClient error: ", error)
+        logging.error(f"Websocket error: {error}")
 
     def on_close(self, ws, close_status_code, close_msg):
         print("### closed ###")
