@@ -1,5 +1,6 @@
 """Contains the task for building agents."""
 
+import logging
 from typing import Optional
 
 from base_agent_code_fetcher import BaseAgentCodeFetcher
@@ -42,9 +43,10 @@ class BuildTask(BaseTask):
             if self._sender:
                 await self._sender.send(self._code_id, True, "")
         except Exception as e:
+            logging.error(f"Failed to build agent {self._code_id}: {e}")
             if self._sender:
                 await self._sender.send(self._code_id, False, str(e))
-            raise e
+            # raise e
         return self._result
 
     @property

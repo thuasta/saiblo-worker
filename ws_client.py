@@ -1,6 +1,8 @@
 import asyncio
 import json
+import logging
 import signal
+import threading
 
 # import threading
 from websocket import WebSocketApp
@@ -73,7 +75,7 @@ class WsClient:
                 # print("send heart beat")
             await asyncio.sleep(HEART_BEAT_INTERVAL)
             # print(f"keep_alive in: {threading.current_thread().name}")
-            # print("thread cnt: ", threading.active_count())
+            print("thread cnt: ", threading.active_count())
 
     def send_init(self):
         data = {
@@ -157,7 +159,7 @@ class WsClient:
         # print("on message in: ", threading.current_thread().name)
 
     def on_error(self, ws, error):
-        print(error)
+        logging.error("WsClient error: ", error)
 
     def on_close(self, ws, close_status_code, close_msg):
         print("### closed ###")

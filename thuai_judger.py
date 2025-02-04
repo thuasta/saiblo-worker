@@ -2,6 +2,7 @@
 
 import base64
 import io
+import logging
 import tarfile
 from typing import List, Dict
 from pathlib import Path
@@ -129,7 +130,7 @@ class ThuaiJudger(BaseMatchJudger):
                 # for network in self.judge_networks[match_id]:
                 #     self.client.networks.get(network).connect(server_name)
 
-                task_server_run = asyncio.to_thread(self.wait_container, server_name)
+                task_server_run = asyncio.create_task(self.wait_container(server_name))
                 task_force_kill = asyncio.create_task(self.force_kill(match_id))
                 try:
                     await task_server_run
@@ -145,7 +146,7 @@ class ThuaiJudger(BaseMatchJudger):
                     scores = [1.0 if i == winner else 0.0 for i in range(token)]
                 except Exception as e:
                     success = False
-                    print(e)
+                    logging.error(f"Failed to get winner: {e}")
                     scores = [0.0] * token
                 record_file_path = Path(record_folder) / "record.dat"
                 states = self.agent_states[match_id]
@@ -171,25 +172,27 @@ class ThuaiJudger(BaseMatchJudger):
                 )
 
                 task_force_kill.cancel()
-            
-            except asyncio.CancelledError:
-                self.stop_judge(match_id)
-                raise
 
             except Exception as e:
                 self.stop_judge(match_id)
-                print(e)
+                logging.error(f"Failed to judge match {match_id}: {e}")
                 raise e
 
         return self.judges[match_id]
 
-    def wait_container(self, container_name: str):
+    async def wait_container(self, container_name: str):
         """Wait before a detached container finishes running.
 
         Args:
             container_name (str): Name of the container.
         """
-        self.client.containers.get(container_name).wait()
+        # self.client.containers.get(container_name).wait()
+        while True:
+            container = self.client.containers.get(container_name)
+            if container.status == "exited":
+                break
+            print(f"Container {container_name} is running. Status: {container.status}")
+            await asyncio.sleep(1)
 
     async def list(self) -> Dict[str, MatchResult]:
         return self.judges.copy()
@@ -223,7 +226,7 @@ class ThuaiJudger(BaseMatchJudger):
         try:
             server_container.kill()
         except Exception as e:
-            print(e)
+            logging.error(f"Failed to kill server container: {e}")
         record_tar_stream = server_container.get_archive("/record/")[0]
         # print(record_tar_file)
         record_folder = self.get_name("record", match_id)
@@ -244,7 +247,7 @@ class ThuaiJudger(BaseMatchJudger):
         try:
             server_container.remove()
         except Exception as e:
-            print(e)
+            logging.error(f"Failed to remove server container: {e}")
 
         self.judge_server.pop(match_id)
 
@@ -263,7 +266,7 @@ class ThuaiJudger(BaseMatchJudger):
                     container.kill()
                     container.remove()
                 except Exception as e:
-                    print(e)
+                    logging.error(f"Failed to remove container {container_name}: {e}")
             self.judge_containers.pop(match_id)
 
         if match_id in self.judge_networks:
