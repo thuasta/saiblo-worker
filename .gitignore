@@ -173,3 +173,5 @@ cython_debug/
 record/
 
 fetched_codes/
+backend2judger.md
+.data/

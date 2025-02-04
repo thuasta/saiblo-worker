@@ -1,5 +1,9 @@
 """Contains the judger class implemented for THUAI matches."""
 
+import base64
+import io
+import logging
+import tarfile
 from typing import List, Dict
 from pathlib import Path
 import random
@@ -12,6 +16,7 @@ from docker.types import Mount
 
 from base_match_judger import BaseMatchJudger
 from match_result import MatchResult
+from path_manager import get_judge_result_base_dir_path
 
 
 JUDGER_NAME_LENGTH = 10
@@ -47,8 +52,10 @@ class ThuaiJudger(BaseMatchJudger):
         self.network_id = 0
 
         # Record resources held by each judge.
+        self.judge_server: Dict[str, str] = {}
         self.judge_containers: Dict[str, List[str]] = {}
         self.judge_networks: Dict[str, List[str]] = {}
+        self.agent_states: Dict[str, List[Dict]] = {}
 
     async def judge(
         self, match_id: str, game_host_image_tag: str, agent_image_tags: List[str]
@@ -62,6 +69,7 @@ class ThuaiJudger(BaseMatchJudger):
                 # Initialize the judge
                 self.judge_containers[match_id] = []
                 self.judge_networks[match_id] = []
+                self.agent_states[match_id] = []
 
                 # Decide name of server.
                 server_name = self.get_name("server")
@@ -75,16 +83,17 @@ class ThuaiJudger(BaseMatchJudger):
                 # Run server container.
                 record_folder = self.get_name("record", match_id)
                 Path(record_folder).mkdir(parents=True)
-                server_mount = Mount("/record", record_folder, type="bind")
+                # server_mount = Mount("/record", record_folder, type="bind")
 
                 self.client.containers.run(
                     game_host_image_tag,
                     # ports={"14514/tcp": 14514},
-                    remove=True,
-                    mounts=[server_mount],
+                    # remove=True,
+                    # mounts=[server_mount],
                     detach=True,
                     name=server_name,
                 )
+                self.judge_server[match_id] = server_name
 
                 print(
                     f"Server {server_name} is running with image {game_host_image_tag}."
@@ -112,7 +121,7 @@ class ThuaiJudger(BaseMatchJudger):
                         network=network_name,
                         detach=True,
                         name=container_name,
-                        remove=True,
+                        # remove=True,
                     )
                     self.judge_containers[match_id].append(container_name)
 
@@ -121,34 +130,69 @@ class ThuaiJudger(BaseMatchJudger):
                 # for network in self.judge_networks[match_id]:
                 #     self.client.networks.get(network).connect(server_name)
 
-                task_server_run = asyncio.to_thread(self.wait_container, server_name)
+                task_server_run = asyncio.create_task(self.wait_container(server_name))
                 task_force_kill = asyncio.create_task(self.force_kill(match_id))
-
-                await task_server_run
+                try:
+                    await task_server_run
+                except JudgeTimeoutException:
+                    print(f"Timeout: match_id {match_id}")
 
                 self.stop_judge(match_id)
-
-                winner = self.get_winner(match_id)
-                scores = [1.0 if i == winner else 0.0 for i in range(token)]
+                print("Server stopped")
+                success = True
+                try:
+                    winner = self.get_winner(match_id)
+                    print("Winner: ", winner)
+                    scores = [1.0 if i == winner else 0.0 for i in range(token)]
+                except Exception as e:
+                    success = False
+                    logging.error(f"Failed to get winner: {e}")
+                    scores = [0.0] * token
                 record_file_path = Path(record_folder) / "record.dat"
+                states = self.agent_states[match_id]
+                # Fill in the missing states
+                for i in range(len(states), token):
+                    states.append(
+                        {
+                            "position": i,
+                            "status": "OK",
+                            "code": 0,
+                            "stderr": "",
+                        }
+                    )
 
-                self.judges[match_id] = MatchResult(match_id, scores, record_file_path)
+                # print("States: ", states)
+                self.judges[match_id] = MatchResult(
+                    match_id=match_id,
+                    scores=scores,
+                    record_file_path=str(record_file_path),
+                    success=success,
+                    err_msg="",
+                    states=states,
+                )
 
                 task_force_kill.cancel()
 
-            except Exception:
+            except Exception as e:
                 self.stop_judge(match_id)
-                raise
+                logging.error(f"Failed to judge match {match_id}: {e}")
+                raise e
 
         return self.judges[match_id]
 
-    def wait_container(self, container_name: str):
+    async def wait_container(self, container_name: str):
         """Wait before a detached container finishes running.
 
         Args:
             container_name (str): Name of the container.
         """
-        self.client.containers.get(container_name).wait()
+        # self.client.containers.get(container_name).wait()
+        while True:
+            container = self.client.containers.get(container_name)
+            if container.status == "exited":
+                break
+            print(f"Container {container_name} is running. Status: {container.status}")
+            await asyncio.sleep(1)
 
     async def list(self) -> Dict[str, MatchResult]:
         return self.judges.copy()
@@ -175,10 +219,54 @@ class ThuaiJudger(BaseMatchJudger):
         Args:
             match_id (str): The match to stop.
         """
+        print(f"Stopping judge {match_id}")
+        if match_id not in self.judge_server:
+            return
+        server_container = self.client.containers.get(self.judge_server[match_id])
+        try:
+            server_container.kill()
+        except Exception as e:
+            logging.error(f"Failed to kill server container: {e}")
+        record_tar_stream = server_container.get_archive("/record/")[0]
+        # print(record_tar_file)
+        record_folder = self.get_name("record", match_id)
+        record_tar_buf = io.BytesIO()
+        for chunk in record_tar_stream:
+            record_tar_buf.write(chunk)
+        # record_tar_stream is a multipart encoded file, we need to extract it
+        with tarfile.open(
+            fileobj=io.BytesIO(record_tar_buf.getvalue()), mode="r"
+        ) as tar:
+            for member in tar.getmembers():
+                split_name = member.name.split("/", 1)
+                if len(split_name) == 1:
+                    continue
+                member.name = split_name[1]
+                tar.extract(member, record_folder)
+
+        try:
+            server_container.remove()
+        except Exception as e:
+            logging.error(f"Failed to remove server container: {e}")
+
+        self.judge_server.pop(match_id)
 
         if match_id in self.judge_containers:
-            for container in self.judge_containers[match_id]:
-                self.client.containers.get(container).kill()
+            for i in range(len(self.judge_containers[match_id])):
+                container_name = self.judge_containers[match_id][i]
+                print(f"Stopping container {container_name}")
+                try:
+                    container = self.client.containers.get(container_name)
+                    state = {}
+                    state["position"] = i
+                    state["status"] = "OK"
+                    state["code"] = 0
+                    state["stderr"] = base64.b64encode(container.logs()).decode("utf-8")
+                    self.agent_states[match_id].append(state)
+                    container.kill()
+                    container.remove()
+                except Exception as e:
+                    logging.error(f"Failed to remove container {container_name}: {e}")
             self.judge_containers.pop(match_id)
 
         if match_id in self.judge_networks:
@@ -229,7 +317,13 @@ class ThuaiJudger(BaseMatchJudger):
             name = NETWORK_NAME_PREFIX + self.name + "_" + str(self.network_id)
             self.network_id = self.network_id + 1
         elif resource_type == "record":
-            name = str(Path.cwd() / "record" / self.name / match_id)
+            name = str(get_judge_result_base_dir_path() / self.name / match_id)
         else:
             raise ValueError
         return name
+
+    def stop(self) -> None:
+        print("Stopping judger")
+        judge_server_copy = self.judge_server.copy()
+        for match_id in judge_server_copy:
+            self.stop_judge(match_id)

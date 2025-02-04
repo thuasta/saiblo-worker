@@ -1,5 +1,8 @@
 import asyncio
 import json
+import logging
+import signal
+import threading
 
 # import threading
 from websocket import WebSocketApp
@@ -11,10 +14,10 @@ from base_docker_image_builder import BaseDockerImageBuilder
 from base_match_judger import BaseMatchJudger
 from base_match_result_reporter import BaseMatchResultReporter
 from base_task_scheduler import BaseTaskScheduler
-from compile_task import CompileTask
+from build_task import BuildTask
 from judge_task import JudgeTask
 
-HEART_BEAT_INTERVAL = 1
+HEART_BEAT_INTERVAL = 3
 TASK_REQUEST_INTERVAL = 1
 
 
@@ -72,18 +75,18 @@ class WsClient:
                 # print("send heart beat")
             await asyncio.sleep(HEART_BEAT_INTERVAL)
             # print(f"keep_alive in: {threading.current_thread().name}")
-            # print("thread cnt: ", threading.active_count())
+            print("thread cnt: ", threading.active_count())
 
     def send_init(self):
         data = {
             "type": "init",
             "data": {"description": self._judger_name, "address": ""},
         }
-
+        print("send_init")
         self._ws.send(json.dumps(data))
 
     def request_judge_task(self):
-        # print("request_judge_task")
+        print("request_judge_task")
         self._judge_task_receive_flag = False
         data = {"type": "request_judge_task", "data": {"queue": 0}}
         self._ws.send(json.dumps(data))
@@ -124,8 +127,11 @@ class WsClient:
             print(data)
             asyncio.run(
                 self._task_scheduler.schedule(
-                    CompileTask(
-                        data["code_id"], self._fetcher, self._builder, self._cr_sender
+                    BuildTask(
+                        code_id=data["code_id"],
+                        fetcher=self._fetcher,
+                        builder=self._builder,
+                        sender=self._cr_sender,
                     )
                 )
             )
@@ -153,11 +159,19 @@ class WsClient:
         # print("on message in: ", threading.current_thread().name)
 
     def on_error(self, ws, error):
-        print(error)
+        logging.error(f"Websocket error: {error}")
 
-    def on_close(self, ws):
+    def on_close(self, ws, close_status_code, close_msg):
         print("### closed ###")
-        # reconnect
+        print("WsClient closed with code: ", close_status_code, " msg: ", close_msg)
+        self._judge_task_receive_flag = True
+        # # reconnect
+        # if self._running:
+        #     self._ws.run_forever()
+
+    def run_forever(self):
+        while self._running:
+            self._ws.run_forever()
 
     def on_open(self, ws):
         print("### opened ###")
@@ -173,7 +187,7 @@ class WsClient:
         )
         self._ws.on_open = self.on_open
 
-        self._ws_task = asyncio.to_thread(self._ws.run_forever)
+        self._ws_task = asyncio.to_thread(self.run_forever)
 
         self._task_scheduler_task = asyncio.create_task(self._task_scheduler.start())
 
@@ -186,13 +200,17 @@ class WsClient:
         self._keep_report_finished_judge_task = asyncio.create_task(
             self.keep_report_finished_judge_task()
         )
-
-        await self._ws_task
-        await self._task_scheduler_task
-        await self._keep_alive_task
-        await self._keep_request_judge_task
-        await self._keep_report_finished_judge_task
-
+        try:
+            await asyncio.gather(
+                self._ws_task,
+                self._task_scheduler_task,
+                self._keep_alive_task,
+                self._keep_request_judge_task,
+                self._keep_report_finished_judge_task,
+            )
+        except asyncio.CancelledError:
+            print("WsClient cancelled")
+            self.stop()
         # print("start")
 
     def stop(self):

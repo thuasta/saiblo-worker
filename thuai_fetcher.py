@@ -1,23 +1,31 @@
 import io
 from pathlib import Path
+import tarfile
 from typing import Dict
 import zipfile
+
+import aiohttp
 from base_agent_code_fetcher import BaseAgentCodeFetcher
-import requests
 import shutil
 
+from path_manager import get_agent_code_base_dir_path
+
 # https API
-CODE_INFO_API = "https://api.dev.saiblo.net/judger/codes/{}"
-CODE_DOWNLOAD_API = "https://api.dev.saiblo.net/judger/codes/{}/download"
+CODE_INFO_API = "/judger/codes/{}"
+CODE_DOWNLOAD_API = "/judger/codes/{}/download"
 
 
 class ThuaiFetcher(BaseAgentCodeFetcher):
     """Fetches agent code for THUAI."""
 
+    _session: aiohttp.ClientSession
+
+    def __init__(self, session: aiohttp.ClientSession):
+        self._session = session
+
     async def clean(self) -> None:
         """Cleans up fetched resources."""
-        # remove fetched_codes
-        shutil.rmtree("fetched_codes")
+        shutil.rmtree(get_agent_code_base_dir_path(), ignore_errors=True)
 
     async def fetch(self, code_id: str) -> Path:
         """Fetches the code for an agent and saves it to a directory(containing the dockerfile)
@@ -40,15 +48,23 @@ class ThuaiFetcher(BaseAgentCodeFetcher):
         # get code download link
         code_download_link = CODE_DOWNLOAD_API.format(code_id)
         # download code
-        code_zip = requests.get(code_download_link)
-        if code_zip.status_code == 200:
-            zip_file = zipfile.ZipFile(io.BytesIO(code_zip.content))
-            zip_file.extractall(f"fetched_codes/{code_id}")
-            zip_file.close()
-        else:
-            raise Exception("Failed to download code")
-
-        return Path(f"fetched_codes/{code_id}")
+        async with self._session.get(code_download_link) as code_zip:
+            content = await code_zip.read()
+            if code_zip.status == 200:
+                zip_file = zipfile.ZipFile(io.BytesIO(content))
+                tar_path = get_agent_code_base_dir_path() / f"{code_id}.tar"
+                tar_path.parent.mkdir(parents=True, exist_ok=True)
+                with tarfile.open(tar_path, "w") as tar:
+                    for file_name in zip_file.namelist():
+                        if file_name.endswith("/"):
+                            continue
+                        file_data = zip_file.read(file_name)
+                        tarinfo = tarfile.TarInfo(name=file_name)
+                        tarinfo.size = len(file_data)
+                        tar.addfile(tarinfo, io.BytesIO(file_data))
+                return tar_path
+            else:
+                raise Exception("Failed to download code: " + code_zip.status)
 
     async def list(self) -> Dict[str, Path]:
         """Lists all the code IDs that are already fetched.

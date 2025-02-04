@@ -41,7 +41,7 @@ class JudgeTask(BaseTask):
         self._reporter = reporter
 
         self._build_tasks = [
-            BuildTask(code_id, fetcher, builder) for code_id in player_code_ids
+            BuildTask(code_id, fetcher, builder, None) for code_id in player_code_ids
         ]
 
     async def execute(self) -> MatchResult:
@@ -50,25 +50,36 @@ class JudgeTask(BaseTask):
         Returns:
             The match judge result
         """
-
-        agent_image_tags = await asyncio.gather(
-            *[t.execute() for t in self._build_tasks]
-        )
-
-        for tag in agent_image_tags:
-            if tag.split(":")[0] == "E":
-                match_result = MatchResult(
-                    self._match_id, scores=[0, 0], record_file_path=""
-                )
-                await self._reporter.report(match_result)
-                return match_result
-
-        match_result = await self._judger.judge(
-            self._match_id, self._game_host_image_tag, agent_image_tags
-        )
-        await self._reporter.report(match_result)
-        self._result = match_result
-        return match_result
+        try:
+            agent_image_tags = await asyncio.gather(
+                *[t.execute() for t in self._build_tasks]
+            )
+            match_result = await self._judger.judge(
+                self._match_id, self._game_host_image_tag, agent_image_tags
+            )
+            await self._reporter.report(match_result)
+            self._result = match_result
+            return match_result
+        except asyncio.CancelledError:
+            print("Task cancelled.")
+            self._judger.stop()
+            raise
+        except Exception as e:
+            # If any build task failed, the match is judged as failed.
+            match_result = MatchResult(
+                match_id=self._match_id,
+                success=False,
+                err_msg=str(e),
+                scores=[0] * len(self._build_tasks),
+                record_file_path=None,
+                states=[
+                    {"position": i, "status": "OK", "code": 0, "stderr": ""}
+                    for i in range(len(self._build_tasks))
+                ],
+            )
+            await self._reporter.report(match_result)
+            self._result = match_result
+            return match_result
 
     @property
     def result(self) -> Optional[MatchResult]:

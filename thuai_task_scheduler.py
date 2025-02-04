@@ -3,7 +3,7 @@ import asyncio
 
 from base_task import BaseTask
 from base_task_scheduler import BaseTaskScheduler
-from compile_task import CompileTask
+from build_task import BuildTask
 from judge_task import JudgeTask
 import uuid
 
@@ -16,7 +16,7 @@ JUDGE_TASK_PARALLELISM = 1
 class ThuaiTaskScheduler(BaseTaskScheduler):
     """Concrete implementation of a task scheduler."""
 
-    _compilation_tasks: Dict[str, CompileTask]
+    _compilation_tasks: Dict[str, BuildTask]
     _judge_tasks: Dict[str, JudgeTask]
     _compilation_tasks_queue: asyncio.Queue
     _judge_tasks_queue: asyncio.Queue
@@ -51,7 +51,7 @@ class ThuaiTaskScheduler(BaseTaskScheduler):
         # generate uuid for the task
         task_id = str(uuid.uuid4())
         # distinguish the type of task
-        if isinstance(task, CompileTask):
+        if isinstance(task, BuildTask):
             self._compilation_tasks[task_id] = task
             self._compilation_tasks_queue.put_nowait(task)
             task_id = "compilation_task_{}".format(task_id)
@@ -68,7 +68,7 @@ class ThuaiTaskScheduler(BaseTaskScheduler):
         self, scheduled_tasks_queue: asyncio.Queue, task_parallelism: int
     ) -> None:
         """Loop for executing compilation tasks."""
-        print("Task loop started.")
+        # print("Task loop started.")
         while True:
             tasks: List[BaseTask] = []
             # get the tasks from the queue
