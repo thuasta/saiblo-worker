@@ -36,7 +36,7 @@ class BaseMatchJudger(ABC):
             A dictionary mapping match IDs to their corresponding MatchResult objects
         """
         raise NotImplementedError
-    
+
     @abstractmethod
     def stop(self) -> None:
         """Stops the judger."""

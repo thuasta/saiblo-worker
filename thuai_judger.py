@@ -159,8 +159,8 @@ class ThuaiJudger(BaseMatchJudger):
                             "code": 0,
                             "stderr": "",
                         }
-                    )  
-                    
+                    )
+
                 # print("States: ", states)
                 self.judges[match_id] = MatchResult(
                     match_id=match_id,

@@ -168,7 +168,7 @@ class WsClient:
         # # reconnect
         # if self._running:
         #     self._ws.run_forever()
-    
+
     def run_forever(self):
         while self._running:
             self._ws.run_forever()
