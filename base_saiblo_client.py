@@ -1,3 +1,5 @@
+"""Base class for Saiblo clients."""
+
 from abc import ABC, abstractmethod
 
 

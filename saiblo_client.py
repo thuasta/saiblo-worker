@@ -45,7 +45,7 @@ class SaibloClient(BaseSaibloClient):
         docker_image_builder: BaseDockerImageBuilder,
         match_judger: BaseMatchJudger,
         match_result_reporter: BaseMatchResultReporter,
-    ):  # pylint: disable=too-many-arguments
+    ):
         self._name = name
         self._websocket_url = websocket_url
         self._task_scheduler = task_scheduler
