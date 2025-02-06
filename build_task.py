@@ -45,3 +45,30 @@ class BuildTask(BaseTask):
     @property
     def result(self) -> Optional[BuildResult]:
         return self._result
+
+
+class BuildTaskFactory:
+    """Factory for building BuildTask instances."""
+
+    _builder: BaseDockerImageBuilder
+    _fetcher: BaseAgentCodeFetcher
+    _reporter: BaseBuildResultReporter
+
+    def __init__(
+        self,
+        fetcher: BaseAgentCodeFetcher,
+        builder: BaseDockerImageBuilder,
+        reporter: BaseBuildResultReporter,
+    ):
+        self._fetcher = fetcher
+        self._builder = builder
+        self._reporter = reporter
+
+    def create(self, code_id: str) -> BuildTask:
+        """Creates a new BuildTask instance.
+
+        Args:
+            code_id: The ID of the agent code to build
+        """
+
+        return BuildTask(code_id, self._fetcher, self._builder, self._reporter)

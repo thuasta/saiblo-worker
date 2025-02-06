@@ -83,3 +83,53 @@ class JudgeTask(BaseTask):
     @property
     def result(self) -> Optional[MatchResult]:
         return self._result
+
+
+class JudgeTaskFactory:
+    """Factory for building JudgeTask instances."""
+
+    _builder: BaseDockerImageBuilder
+    _build_result_reporter: BaseBuildResultReporter
+    _fetcher: BaseAgentCodeFetcher
+    _game_host_image: str
+    _judger: BaseMatchJudger
+    _match_result_reporter: BaseMatchResultReporter
+
+    def __init__(
+        self,
+        game_host_image: str,
+        fetcher: BaseAgentCodeFetcher,
+        builder: BaseDockerImageBuilder,
+        build_result_reporter: BaseBuildResultReporter,
+        judger: BaseMatchJudger,
+        match_result_reporter: BaseMatchResultReporter,
+    ):
+        self._game_host_image = game_host_image
+        self._fetcher = fetcher
+        self._builder = builder
+        self._build_result_reporter = build_result_reporter
+        self._judger = judger
+        self._match_result_reporter = match_result_reporter
+
+    def create(
+        self,
+        match_id: str,
+        agent_code_ids: List[str],
+    ) -> JudgeTask:
+        """Creates a new JudgeTask instance.
+
+        Args:
+            match_id: The ID of the match to judge
+            agent_code_ids: The IDs of the agent code to use in the match
+        """
+
+        return JudgeTask(
+            match_id,
+            self._game_host_image,
+            agent_code_ids,
+            self._fetcher,
+            self._builder,
+            self._build_result_reporter,
+            self._judger,
+            self._match_result_reporter,
+        )

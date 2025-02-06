@@ -9,7 +9,9 @@ import yarl
 
 from agent_code_fetcher import AgentCodeFetcher
 from build_result_reporter import BuildResultReporter
+from build_task import BuildTaskFactory
 from docker_image_builder import DockerImageBuilder
+from judge_task import JudgeTaskFactory
 from match_judger import MatchJudger
 from match_result_reporter import MatchResultReporter
 from saiblo_client import SaibloClient
@@ -45,12 +47,19 @@ async def main():
             name,
             websocket_url,
             task_scheduler,
-            game_host_image,
-            AgentCodeFetcher(session),
-            BuildResultReporter(session),
-            DockerImageBuilder(),
-            MatchJudger(),
-            MatchResultReporter(session),
+            BuildTaskFactory(
+                AgentCodeFetcher(session),
+                DockerImageBuilder(),
+                BuildResultReporter(session),
+            ),
+            JudgeTaskFactory(
+                game_host_image,
+                AgentCodeFetcher(session),
+                DockerImageBuilder(),
+                BuildResultReporter(session),
+                MatchJudger(),
+                MatchResultReporter(session),
+            ),
         )
 
         await asyncio.gather(
