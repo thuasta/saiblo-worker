@@ -170,8 +170,4 @@ cython_debug/
 
 
 .vscode/
-record/
-
-fetched_codes/
-backend2judger.md
-.data/
+/data/

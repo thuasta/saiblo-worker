@@ -1,7 +1,7 @@
 """Contains the base classes for match judgers."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from match_result import MatchResult
 
@@ -10,8 +10,13 @@ class BaseMatchJudger(ABC):
     """Abstract base class for match judgers."""
 
     @abstractmethod
+    async def clean(self) -> None:
+        """Cleans up judge results."""
+        raise NotImplementedError
+
+    @abstractmethod
     async def judge(
-        self, match_id: str, game_host_image_tag: str, agent_image_tags: List[str]
+        self, match_id: str, game_host_image: str, agent_images: List[Optional[str]]
     ) -> MatchResult:
         """Judges a match.
 
@@ -20,8 +25,8 @@ class BaseMatchJudger(ABC):
 
         Args:
             match_id: The ID of the match to judge
-            game_host_image_tag: The tag of the host image
-            agent_image_tags: The tags of the agent images
+            game_host_image: The host image
+            agent_images: A list of agent images
 
         Returns:
             The result of the match
@@ -35,9 +40,4 @@ class BaseMatchJudger(ABC):
         Returns:
             A dictionary mapping match IDs to their corresponding MatchResult objects
         """
-        raise NotImplementedError
-
-    @abstractmethod
-    def stop(self) -> None:
-        """Stops the judger."""
         raise NotImplementedError

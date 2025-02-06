@@ -1,79 +1,63 @@
-import base64
-import time
-from aiohttp_session_manager import AiohttpSessionManager
-from base_task_scheduler import BaseTaskScheduler
-from build_task import BuildTask
-from match_result import MatchResult
-from thuai_builder import ThuaiBuilder
-from thuai_cr_sender import ThuaiCRSender
-from thuai_fetcher import ThuaiFetcher
-from thuai_judger import ThuaiJudger
-from thuai_reporter import ThuaiReporter
+"""Main module."""
+
 import asyncio
+import os
 
-from thuai_task_scheduler import ThuaiTaskScheduler
-from ws_client import WsClient
+import aiohttp
+import dotenv
+import yarl
 
-BASE_URL = "https://api.dev.saiblo.net/"
+from agent_code_fetcher import AgentCodeFetcher
+from build_result_reporter import BuildResultReporter
+from docker_image_builder import DockerImageBuilder
+from match_judger import MatchJudger
+from match_result_reporter import MatchResultReporter
+from saiblo_client import SaibloClient
+from task_scheduler import TaskScheduler
 
-
-async def testWsClient():
-    async with AiohttpSessionManager().get_session(BASE_URL) as http_session:
-        ws_client = WsClient(
-            "wss://api.dev.saiblo.net/ws/",
-            "thuai8judger",
-            ThuaiTaskScheduler(),
-            ThuaiFetcher(session=http_session),
-            ThuaiBuilder(),
-            ThuaiCRSender(session=http_session),
-            ThuaiJudger(),
-            ThuaiReporter(session=http_session),
-            "thuai7judger:latest",
-        )
-        await ws_client.start()
-        # print("WsClient started")
-        # # print('qwdhkdjwqieuo')
-        # time.sleep(10)
-        # # print("qhjdqkjwhdjk")
-        # ws_client.stop()
-        # time.sleep(2)
-        # ws_client.start()
-        # time.sleep(20)
-        # ws_client.stop()
-
-
-async def testReporter():
-    async with AiohttpSessionManager().get_session(BASE_URL) as http_session:
-        reporter = ThuaiReporter(session=http_session)
-        match_result = MatchResult(
-            match_id="7716",
-            success=False,
-            scores=[0, 0],
-            err_msg="Test error message",
-            record_file_path="test.dat",
-            states=[
-                {
-                    "position": i,
-                    "status": "OK",
-                    "code": 0,
-                    "stderr": base64.b64encode(b"test").decode("utf-8"),
-                }
-                for i in range(2)
-            ],
-        )
-        await reporter.report(match_result)
+DEFAULT_HTTP_BASE_URL = "https://api.dev.saiblo.net"
+DEFAULT_WEBSOCKET_URL = "wss://api.dev.saiblo.net/ws/"
 
 
 async def main():
-    await testWsClient()
-    # await testReporter()
+    """Main function."""
+
+    # Load environment variables.
+    dotenv.load_dotenv()
+
+    game_host_image = os.getenv("GAME_HOST_IMAGE")
+    if game_host_image is None:
+        raise ValueError("GAME_HOST_IMAGE must be set")
+
+    name = os.getenv("NAME")
+    if name is None:
+        raise ValueError("NAME must be set")
+
+    http_base_url = yarl.URL(os.getenv("HTTP_BASE_URL", DEFAULT_HTTP_BASE_URL))
+
+    websocket_url = os.getenv("WEBSOCKET_URL", DEFAULT_WEBSOCKET_URL)
+
+    # Set up everything.
+    task_scheduler = TaskScheduler()
+
+    async with aiohttp.ClientSession(http_base_url) as session:
+        saiblo_client = SaibloClient(
+            name,
+            websocket_url,
+            task_scheduler,
+            game_host_image,
+            AgentCodeFetcher(session),
+            BuildResultReporter(session),
+            DockerImageBuilder(),
+            MatchJudger(),
+            MatchResultReporter(session),
+        )
+
+        await asyncio.gather(
+            asyncio.create_task(task_scheduler.start()),
+            asyncio.create_task(saiblo_client.start()),
+        )
 
 
 if __name__ == "__main__":
-    # asyncio.run(fetch())
-    # asyncio.run(clean())
-    # print(asyncio.run(buildTask()))
-    # asyncio.run(buildTask())
-    # print(asyncio.run(compileTask()))
-    # testWsClient()
     asyncio.run(main())

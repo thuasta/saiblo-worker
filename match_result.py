@@ -1,7 +1,8 @@
 """Contains the match result."""
 
 from dataclasses import dataclass
-from typing import List, Optional
+from pathlib import Path
+from typing import List, Literal, Optional
 
 
 @dataclass
@@ -10,23 +11,32 @@ class MatchResult:
 
     Attributes:
         match_id: The match ID
-        success: Whether the match was successfully judged
-        err_msg: An error message if the match was not successfully judged
-        scores: A list of scores
-            achieved by each agent. The index corresponds to the agent's position in the
-            original agent_paths list. Higher scores typically indicate better performance.
-        record_file_path: The path to the record file.
-        states: A list of states for each agent. Each state is a dictionary.
-            state:
-                position: the rank of the agent
-                status: the status of the agent,  ["OK", "RE", "TLE", "MLE", "OLE", "STLE", "EXIT", "UE", "CANCEL", "IA"]
-                code: the exit code of the agent
-                stderr: the stderr of the agent, base64 encoded
+        agent_results: The match result for each agent
+        error_message: The error message of the match result
+        success: Whether the match was successful
+        replay_file_path: The path to the replay file
     """
 
+    @dataclass
+    class AgentResult:
+        """Match result for an agent.
+
+        Attributes:
+            exit_code: The exit code of the agent
+            score: The score of the agent
+            status: The status of the agent
+            stderr_output: The stderr output of the agent
+        """
+
+        exit_code: int
+        score: float
+        status: Literal[
+            "OK", "RE", "TLE", "MLE", "OLE", "STLE", "EXIT", "UE", "CANCEL", "IA"
+        ]
+        stderr_output: str
+
     match_id: str
-    success: bool
-    err_msg: str
-    scores: List[float]
-    record_file_path: Optional[str]
-    states: List[dict]
+
+    agent_results: List[AgentResult]
+    error_message: str
+    replay_file_path: Optional[Path]

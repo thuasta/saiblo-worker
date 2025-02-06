@@ -4,12 +4,14 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict
 
+from build_result import BuildResult
+
 
 class BaseDockerImageBuilder(ABC):
     """Abstract base class for Docker image builders."""
 
     @abstractmethod
-    async def build(self, file_path: Path) -> str:
+    async def build(self, code_id: str, file_path: Path) -> BuildResult:
         """Builds a Docker image.
 
         If the image already exists, it will not be built again. So it is OK to call this method to
@@ -29,10 +31,10 @@ class BaseDockerImageBuilder(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def list(self) -> Dict[Path, str]:
+    async def list(self) -> Dict[str, str]:
         """Lists all Docker images built by this builder.
 
         Returns:
-            A dictionary mapping paths to the tags of their corresponding Docker images
+            A dictionary mapping code IDs to the tags of their corresponding Docker images
         """
         raise NotImplementedError

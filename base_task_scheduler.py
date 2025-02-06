@@ -1,8 +1,6 @@
 """Contains the base classes for task schedulers."""
 
 from abc import ABC, abstractmethod
-import asyncio
-from typing import List
 
 from base_task import BaseTask
 
@@ -10,17 +8,10 @@ from base_task import BaseTask
 class BaseTaskScheduler(ABC):
     """Abstract base class for task schedulers."""
 
+    @property
     @abstractmethod
-    def can_accept_judge_task(self) -> bool:
-        """Check if the scheduler can accept a new judge task.
-
-        Returns:
-            True if the scheduler can accept a new judge task, False otherwise
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_finished_judge_tasks_queue(self) -> asyncio.Queue:
+    def idle(self) -> bool:
+        """Whether the scheduler is idle."""
         raise NotImplementedError
 
     @abstractmethod
@@ -29,16 +20,16 @@ class BaseTaskScheduler(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def list(self) -> List[BaseTask]:
-        """Lists all the tasks that have been scheduled.
+    async def pop_done_task(self) -> BaseTask:
+        """Pops a task that has been finished.
 
         Returns:
-            A list of tasks
+            The task that has been finished
         """
         raise NotImplementedError
 
     @abstractmethod
-    async def schedule(self, task: BaseTask) -> str:
+    async def schedule(self, task: BaseTask) -> None:
         """Schedules a task.
 
         If there are already some tasks running, the task will be scheduled after the current tasks
@@ -46,9 +37,6 @@ class BaseTaskScheduler(ABC):
 
         Args:
             task: The task to schedule
-
-        Returns:
-            The ID of the scheduled task
         """
         raise NotImplementedError
 

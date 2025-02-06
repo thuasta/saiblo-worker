@@ -10,7 +10,16 @@ def get_agent_code_base_dir_path() -> Path:
         The base directory for agent code
     """
 
-    return Path(".data/agent_code").absolute()
+    return Path("data/agent_code").absolute()
+
+
+def get_judge_replay_base_dir_path() -> Path:
+    """Gets the base directory for judge replays.
+
+    Returns:
+        The base directory for judge replays
+    """
+    return Path("data/judge_replays").absolute()
 
 
 def get_judge_result_base_dir_path() -> Path:
@@ -19,4 +28,4 @@ def get_judge_result_base_dir_path() -> Path:
     Returns:
         The base directory for judge results
     """
-    return Path(".data/judge_results").absolute()
+    return Path("data/judge_results").absolute()

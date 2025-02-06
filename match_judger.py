@@ -1,0 +1,333 @@
+"""The implementation of the match judger."""
+
+import asyncio
+import io
+import json
+import shutil
+import tarfile
+import uuid
+from dataclasses import dataclass
+from typing import Dict, List, Optional, TypedDict
+
+import dacite
+import docker
+import docker.models.containers
+import docker.models.networks
+
+import path_manager
+from base_match_judger import BaseMatchJudger
+from match_result import MatchResult
+
+_AGENT_CONTAINER_NAME_PREFIX = "saiblo-worker-agent"
+_GAME_HOST_APP_DATA_DIR_PATH = "/app/data"
+_GAME_HOST_CONTAINER_NAME_PREFIX = "saiblo-worker-game-host"
+_GAME_HOST_REPLAY_FILE_NAME = "replay.dat"
+_GAME_HOST_RESULT_FILE_NAME = "result.json"
+_NETWORK_NAME_PREFIX = "saiblo-worker-network"
+
+JUDGE_TIMEOUT = 600  # In seconds
+
+
+@dataclass
+class _AgentInfo:
+    """The information of an agent.
+
+    Attributes:
+        code_id: The ID of the agent code.
+        image_tag: The image tag of the agent.
+    """
+
+    container_name: str
+    image: str
+    network_name: str
+    token: str
+
+
+class _GameHostMatchResult(TypedDict):
+    """The result of a match from the game host.
+
+    Attributes:
+        scores: The mapping from agent tokens to scores.
+    """
+
+    scores: Dict[str, float]
+
+
+class JudgeTimeoutException(Exception):
+    """Exception class for Judge timeout"""
+
+    def __init__(self):
+        pass
+
+
+class MatchJudger(BaseMatchJudger):
+    """The match judger."""
+
+    def __init__(self):
+        self._client = docker.from_env()
+
+    async def clean(self) -> None:
+        # Clean containers.
+        for container in self._client.containers.list(all=True):
+            assert isinstance(container, docker.models.containers.Container)
+
+            if container.name is not None and (
+                container.name.startswith(_AGENT_CONTAINER_NAME_PREFIX)
+                or container.name.startswith(_GAME_HOST_CONTAINER_NAME_PREFIX)
+            ):
+                container.stop(timeout=0)
+                container.remove(v=True, force=True)
+
+        # Clean networks.
+        for network in self._client.networks.list():
+            if network.name is not None and network.name.startswith(
+                _NETWORK_NAME_PREFIX
+            ):
+                network.remove()
+
+        # Clean replays.
+        judge_replay_base_dir_path = path_manager.get_judge_replay_base_dir_path()
+
+        if judge_replay_base_dir_path.is_dir():
+            shutil.rmtree(judge_replay_base_dir_path, ignore_errors=True)
+
+        judge_replay_base_dir_path.mkdir(parents=True, exist_ok=True)
+
+        # Clean results.
+        judge_result_base_dir_path = path_manager.get_judge_result_base_dir_path()
+
+        if judge_result_base_dir_path.is_dir():
+            shutil.rmtree(judge_result_base_dir_path, ignore_errors=True)
+
+        judge_result_base_dir_path.mkdir(parents=True, exist_ok=True)
+
+    async def judge(
+        self,
+        match_id: str,
+        game_host_image: str,
+        agent_images: List[Optional[str]],
+    ) -> MatchResult:
+        judge_replay_base_dir_path = path_manager.get_judge_replay_base_dir_path()
+        judge_replay_base_dir_path.mkdir(parents=True, exist_ok=True)
+
+        judge_result_base_dir_path = path_manager.get_judge_result_base_dir_path()
+        judge_result_base_dir_path.mkdir(parents=True, exist_ok=True)
+
+        judge_replay_file_path = judge_replay_base_dir_path / f"{match_id}.dat"
+        judge_result_file_path = judge_result_base_dir_path / f"{match_id}.json"
+
+        # If judged before, return the result.
+        if judge_replay_file_path.is_file() and judge_result_file_path.is_file():
+            return dacite.from_dict(
+                MatchResult, json.load(judge_result_file_path.open("r"))
+            )
+
+        game_host_container_name = f"{_GAME_HOST_CONTAINER_NAME_PREFIX}-{match_id}"
+
+        agent_info_list: List[Optional[_AgentInfo]] = [
+            (
+                _AgentInfo(
+                    container_name=f"{_AGENT_CONTAINER_NAME_PREFIX}-{match_id}-{i}",
+                    image=image,
+                    network_name=f"{_NETWORK_NAME_PREFIX}-{match_id}-{i}",
+                    token=uuid.uuid4().hex,
+                )
+                if image is not None
+                else None
+            )
+            for i, image in enumerate(agent_images)
+        ]
+
+        try:
+            # Run the game host.
+            game_host_container = self._client.containers.run(
+                game_host_image,
+                detach=True,
+                name=game_host_container_name,
+            )
+
+            # Run agent containers.
+            agent_containers: List[Optional[docker.models.containers.Container]] = []
+            agent_networks: List[Optional[docker.models.networks.Network]] = []
+
+            for agent_info in agent_info_list:
+                # For agents that are not provided, append None.
+                if agent_info is None:
+                    agent_containers.append(None)
+                    agent_networks.append(None)
+                    continue
+
+                # Create container.
+                agent_container = self._client.containers.run(
+                    agent_info.image,
+                    [
+                        "--token",
+                        agent_info.token,
+                        "--server",
+                        f"ws://{game_host_container_name}:14514",
+                    ],
+                    detach=True,
+                    name=agent_info.container_name,
+                )
+                agent_containers.append(agent_container)
+
+                # Create network.
+                agent_network = self._client.networks.create(agent_info.network_name)
+                agent_network.connect(game_host_container_name)
+                agent_network.connect(agent_info.container_name)
+                agent_networks.append(agent_network)
+
+            # Wait until the game host finishes or timeout.
+            await asyncio.to_thread(game_host_container.wait, timeout=JUDGE_TIMEOUT)
+
+            # Stop the game host and agent containers.
+            # For game host, we give it some time after SIGTERM to write the result file.
+            game_host_container.stop()
+
+            for agent_container in agent_containers:
+                if agent_container is not None:
+                    agent_container.stop(timeout=0)
+
+            # Get and save the result and the replay file.
+            game_host_app_data_tarball_stream, _ = game_host_container.get_archive(
+                _GAME_HOST_APP_DATA_DIR_PATH
+            )
+
+            game_host_app_data_tarball_bytesio = io.BytesIO()
+            for chunk in game_host_app_data_tarball_stream:
+                game_host_app_data_tarball_bytesio.write(chunk)
+
+            with tarfile.open(
+                fileobj=game_host_app_data_tarball_bytesio, mode="r"
+            ) as tar_file:
+                if (
+                    _GAME_HOST_REPLAY_FILE_NAME not in tar_file.getnames()
+                    or _GAME_HOST_RESULT_FILE_NAME not in tar_file.getnames()
+                ):
+                    raise FileNotFoundError("Replay or result file not found.")
+
+                result_file = tar_file.extractfile(_GAME_HOST_RESULT_FILE_NAME)
+
+                if result_file is None:
+                    raise FileNotFoundError("Cannot extract result file.")
+
+                with open(judge_result_file_path, "wb") as f:
+                    f.write(result_file.read())
+
+                replay_file = tar_file.extractfile(_GAME_HOST_REPLAY_FILE_NAME)
+
+                if replay_file is None:
+                    raise FileNotFoundError("Cannot extract replay file.")
+
+                with judge_replay_file_path.open("wb") as f:
+                    f.write(replay_file.read())
+
+                game_host_match_result: _GameHostMatchResult = json.loads(
+                    result_file.read().decode("utf-8")
+                )
+
+            # Clean networks.
+            for agent_network in agent_networks:
+                if agent_network is not None:
+                    agent_network.remove()
+
+            # Clean containers.
+            game_host_container.remove(v=True, force=True)
+
+            for agent_container in agent_containers:
+                if agent_container is not None:
+                    agent_container.remove(v=True, force=True)
+
+            # Return the result.
+            agent_results: List[MatchResult.AgentResult] = []
+
+            for i, _ in enumerate(agent_info_list):
+                agent_info = agent_info_list[i]
+
+                if agent_info is None:
+                    agent_results.append(
+                        MatchResult.AgentResult(
+                            exit_code=0,
+                            score=0.0,
+                            status="CANCEL",
+                            stderr_output="",
+                        )
+                    )
+                else:
+                    container = agent_containers[i]
+                    assert container is not None
+
+                    agent_results.append(
+                        MatchResult.AgentResult(
+                            exit_code=(await asyncio.to_thread(container.wait))[
+                                "StatusCode"
+                            ],
+                            score=(
+                                game_host_match_result["scores"][agent_info.token]
+                                if agent_info.token in game_host_match_result["scores"]
+                                else 0.0
+                            ),
+                            status="OK",
+                            stderr_output=container.logs(stdout=False).decode("utf-8"),
+                        )
+                    )
+
+            return MatchResult(
+                match_id=match_id,
+                agent_results=agent_results,
+                error_message="",
+                replay_file_path=judge_replay_file_path,
+            )
+
+        except Exception as e:  # pylint: disable=broad-except
+            return MatchResult(
+                match_id=match_id,
+                agent_results=[
+                    MatchResult.AgentResult(
+                        exit_code=0,
+                        score=0.0,
+                        status="CANCEL",
+                        stderr_output="",
+                    )
+                    for _ in range(len(agent_info_list))
+                ],
+                error_message=str(e),
+                replay_file_path=None,
+            )
+
+        finally:
+            # Clean networks.
+            for network in self._client.networks.list():
+                if network.name is not None and network.name in [
+                    agent_info.network_name
+                    for agent_info in agent_info_list
+                    if agent_info is not None
+                ]:
+                    network.remove()
+
+            # Clean containers.
+            for container in self._client.containers.list(all=True):
+                assert isinstance(container, docker.models.containers.Container)
+
+                if container.name is not None and (
+                    container.name == game_host_container_name
+                    or container.name
+                    in [
+                        agent_info.container_name
+                        for agent_info in agent_info_list
+                        if agent_info
+                    ]
+                ):
+                    container.stop(timeout=0)
+                    container.remove(v=True, force=True)
+
+    async def list(self) -> Dict[str, MatchResult]:
+        judge_result_base_dir_path = path_manager.get_judge_result_base_dir_path()
+        judge_result_base_dir_path.mkdir(parents=True, exist_ok=True)
+
+        judge_result_paths = judge_result_base_dir_path.glob("*.json")
+
+        return {
+            path.stem: dacite.from_dict(MatchResult, json.load(path.open("r")))
+            for path in judge_result_paths
+        }

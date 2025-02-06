@@ -30,7 +30,7 @@ class BaseAgentCodeFetcher(ABC):
 
     @abstractmethod
     async def list(self) -> Dict[str, Path]:
-        """Lists all the code IDs that are already fetched.
+        """Lists all agent code tarballs that are already fetched.
 
         Returns:
             A dictionary mapping code IDs to the paths of their corresponding tarball files
