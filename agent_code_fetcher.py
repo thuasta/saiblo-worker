@@ -24,7 +24,6 @@ class AgentCodeFetcher(BaseAgentCodeFetcher):
         Args:
             session: The aiohttp client session initialized with the base URL of the API
         """
-
         self._session = session
 
     async def clean(self) -> None:

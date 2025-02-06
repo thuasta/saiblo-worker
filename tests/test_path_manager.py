@@ -11,6 +11,12 @@ class TestPathManager(unittest.TestCase):
             path_manager.get_agent_code_base_dir_path(),
         )
 
+    def test_get_judge_replay_base_dir_path(self):
+        self.assertEqual(
+            Path.cwd() / "data/judge_replays",
+            path_manager.get_judge_replay_base_dir_path(),
+        )
+
     def test_get_judge_result_base_dir_path(self):
         self.assertEqual(
             Path.cwd() / "data/judge_results",

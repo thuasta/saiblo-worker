@@ -11,7 +11,6 @@ class BaseAgentCodeFetcher(ABC):
     @abstractmethod
     async def clean(self) -> None:
         """Cleans up fetched resources."""
-        raise NotImplementedError
 
     @abstractmethod
     async def fetch(self, code_id: str) -> Path:
@@ -26,7 +25,6 @@ class BaseAgentCodeFetcher(ABC):
         Returns:
             The path to the tarball file where the code should be saved
         """
-        raise NotImplementedError
 
     @abstractmethod
     async def list(self) -> Dict[str, Path]:
@@ -35,4 +33,3 @@ class BaseAgentCodeFetcher(ABC):
         Returns:
             A dictionary mapping code IDs to the paths of their corresponding tarball files
         """
-        raise NotImplementedError
