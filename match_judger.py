@@ -20,13 +20,16 @@ from base_match_judger import BaseMatchJudger
 from match_result import MatchResult
 
 _AGENT_CONTAINER_NAME_PREFIX = "saiblo-worker-agent"
+_AGENT_MEM_LIMIT = "1g"
+_AGENT_NANO_CPUS = 500000000  # 0.5 CPU
 _GAME_HOST_APP_DATA_DIR_PATH = "/app/data/"
 _GAME_HOST_CONTAINER_NAME_PREFIX = "saiblo-worker-game-host"
+_GAME_HOST_MEM_LIMIT = "1.8g"
+_GAME_HOST_NANO_CPUS = 900000000  # 0.9 CPU
 _GAME_HOST_REPLAY_FILE_NAME = "data/replay.dat"
 _GAME_HOST_RESULT_FILE_NAME = "data/result.json"
+_JUDGE_TIMEOUT = 600  # In seconds
 _NETWORK_NAME_PREFIX = "saiblo-worker-network"
-
-JUDGE_TIMEOUT = 600  # In seconds
 
 
 @dataclass
@@ -141,7 +144,9 @@ class MatchJudger(BaseMatchJudger):
                         ]
                     )
                 },
+                mem_limit=_GAME_HOST_MEM_LIMIT,
                 name=game_host_container_name,
+                nano_cpus=_GAME_HOST_NANO_CPUS,
             )
 
             # Run agent containers.
@@ -163,7 +168,9 @@ class MatchJudger(BaseMatchJudger):
                         "TOKEN": agent_info.token,
                         "GAME_HOST": f"ws://{game_host_container_name}:14514",
                     },
+                    mem_limit=_AGENT_MEM_LIMIT,
                     name=agent_info.container_name,
+                    network=agent_info.network_name,
                 )
                 agent_containers.append(agent_container)
 
@@ -174,7 +181,7 @@ class MatchJudger(BaseMatchJudger):
                 agent_networks.append(agent_network)
 
             # Wait until the game host finishes or timeout.
-            await asyncio.to_thread(game_host_container.wait, timeout=JUDGE_TIMEOUT)
+            await asyncio.to_thread(game_host_container.wait, timeout=_JUDGE_TIMEOUT)
 
             # Stop the game host and agent containers.
             # For game host, we give it some time after SIGTERM to write the result file.
@@ -260,7 +267,7 @@ class MatchJudger(BaseMatchJudger):
             return match_result
 
         except Exception as e:  # pylint: disable=broad-except
-            return MatchResult(
+            match_result = MatchResult(
                 match_id=match_id,
                 agent_results=[
                     MatchResult.AgentResult(
@@ -279,6 +286,8 @@ class MatchJudger(BaseMatchJudger):
                     else ""
                 ),
             )
+
+            return match_result
 
         finally:
             # Clean networks.

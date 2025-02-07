@@ -1,6 +1,7 @@
 """Main module."""
 
 import asyncio
+import logging
 import os
 
 import aiohttp
@@ -18,6 +19,7 @@ from saiblo_client import SaibloClient
 from task_scheduler import TaskScheduler
 
 DEFAULT_HTTP_BASE_URL = "https://api.dev.saiblo.net"
+DEFAULT_LOGGING_LEVEL = "INFO"
 DEFAULT_WEBSOCKET_URL = "wss://api.dev.saiblo.net/ws/"
 
 
@@ -37,9 +39,13 @@ async def main():
 
     http_base_url = yarl.URL(os.getenv("HTTP_BASE_URL", DEFAULT_HTTP_BASE_URL))
 
+    logging_level = os.getenv("LOGGING_LEVEL", DEFAULT_LOGGING_LEVEL)
+
     websocket_url = os.getenv("WEBSOCKET_URL", DEFAULT_WEBSOCKET_URL)
 
     # Set up everything.
+    logging.getLogger().setLevel(logging_level)
+
     task_scheduler = TaskScheduler()
 
     session = aiohttp.ClientSession(http_base_url)

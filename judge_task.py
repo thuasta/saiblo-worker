@@ -1,6 +1,6 @@
 """Contains the task for judging matches."""
 
-import asyncio
+import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -56,24 +56,24 @@ class JudgeTask(BaseTask):
         return self._match_id
 
     async def execute(self) -> MatchResult:
-        agent_build_results = await asyncio.gather(
-            *[
-                BuildTask(
-                    code_id,
-                    self._fetcher,
-                    self._builder,
-                    self._build_result_reporter,
-                ).execute()
-                for code_id in self._agent_code_ids
-            ]
-        )
+        agent_build_results = [
+            await BuildTask(
+                code_id,
+                self._fetcher,
+                self._builder,
+                self._build_result_reporter,
+            ).execute()
+            for code_id in self._agent_code_ids
+        ]
 
+        logging.info("Judging match %s", self._match_id)
         match_result = await self._judger.judge(
             self._match_id,
             self._game_host_image_tag,
             [x.image for x in agent_build_results],
         )
 
+        logging.info("Reporting match result for match %s", self._match_id)
         await self._match_result_reporter.report(match_result)
 
         self._result = match_result
