@@ -11,14 +11,11 @@ import docker
 
 from docker_image_builder import DockerImageBuilder
 
-CODE_ID = "7c562b10-287f-44c0-8fc4-0cf853a1859b"
-
 
 class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
     """Tests for the DockerImageBuilder class."""
 
     _docker_client: docker.DockerClient
-    _session: aiohttp.ClientSession
 
     async def asyncSetUp(self) -> None:
         shutil.rmtree(
@@ -43,37 +40,37 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         """Test build() when target image exists."""
         # Arrange.
         image = self._docker_client.images.pull("hello-world")
-        image.tag("saiblo-worker-image", CODE_ID)
+        image.tag("saiblo-worker-image", "code_id")
         builder = DockerImageBuilder()
 
         # Act.
-        result = await builder.build(CODE_ID, pathlib.Path())
+        result = await builder.build("code_id", pathlib.Path())
 
         # Assert.
-        self.assertEqual(result.code_id, CODE_ID)
-        self.assertEqual(result.image, f"saiblo-worker-image:{CODE_ID}")
+        self.assertEqual(result.code_id, "code_id")
+        self.assertEqual(result.image, "saiblo-worker-image:code_id")
         self.assertEqual(result.message, "")
 
     async def test_build_invalid_tarball(self):
         """Test build() when the tarball is invalid."""
         # Arrange.
-        path = pathlib.Path(f"data/agent_code/{CODE_ID}.tar")
+        path = pathlib.Path("data/agent_code/code_id.tar")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
         builder = DockerImageBuilder()
 
         # Act.
-        result = await builder.build(CODE_ID, path)
+        result = await builder.build("code_id", path)
 
         # Assert.
-        self.assertEqual(result.code_id, CODE_ID)
+        self.assertEqual(result.code_id, "code_id")
         self.assertEqual(result.image, None)
         self.assertNotEqual(result.message, "")
 
     async def test_build_valid_tarball(self):
         """Test build() when the tarball is valid."""
         # Arrange.
-        path = pathlib.Path(f"data/agent_code/{CODE_ID}.tar")
+        path = pathlib.Path("data/agent_code/code_id.tar")
         path.parent.mkdir(parents=True, exist_ok=True)
         dockerfile_bytes = b"FROM hello-world\n"
         tar_info = tarfile.TarInfo("Dockerfile")
@@ -83,11 +80,11 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         builder = DockerImageBuilder()
 
         # Act.
-        result = await builder.build(CODE_ID, path)
+        result = await builder.build("code_id", path)
 
         # Assert.
-        self.assertEqual(result.code_id, CODE_ID)
-        self.assertEqual(result.image, f"saiblo-worker-image:{CODE_ID}")
+        self.assertEqual(result.code_id, "code_id")
+        self.assertEqual(result.image, "saiblo-worker-image:code_id")
         self.assertEqual(result.message, "")
         self.assertEqual(len(self._docker_client.images.list("saiblo-worker-image")), 1)
 
@@ -95,7 +92,7 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         """Test clean()."""
         # Arrange.
         image = self._docker_client.images.pull("hello-world")
-        image.tag("saiblo-worker-image", CODE_ID)
+        image.tag("saiblo-worker-image", "code_id")
         builder = DockerImageBuilder()
 
         # Act.
@@ -108,11 +105,11 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         """Test list()."""
         # Arrange.
         image = self._docker_client.images.pull("hello-world")
-        image.tag("saiblo-worker-image", CODE_ID)
+        image.tag("saiblo-worker-image", "code_id")
         builder = DockerImageBuilder()
 
         # Act.
         result = await builder.list()
 
         # Assert.
-        self.assertEqual(result, {CODE_ID: f"saiblo-worker-image:{CODE_ID}"})
+        self.assertEqual(result, {"code_id": "saiblo-worker-image:code_id"})
