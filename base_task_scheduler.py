@@ -12,12 +12,10 @@ class BaseTaskScheduler(ABC):
     @abstractmethod
     def idle(self) -> bool:
         """Whether the scheduler is idle."""
-        raise NotImplementedError
 
     @abstractmethod
     async def clean(self) -> None:
         """Cleans up scheduled tasks."""
-        raise NotImplementedError
 
     @abstractmethod
     async def pop_done_task(self) -> BaseTask:
@@ -26,7 +24,6 @@ class BaseTaskScheduler(ABC):
         Returns:
             The task that has been finished
         """
-        raise NotImplementedError
 
     @abstractmethod
     async def schedule(self, task: BaseTask) -> None:
@@ -38,7 +35,6 @@ class BaseTaskScheduler(ABC):
         Args:
             task: The task to schedule
         """
-        raise NotImplementedError
 
     @abstractmethod
     async def start(self) -> None:
@@ -47,4 +43,3 @@ class BaseTaskScheduler(ABC):
         This method should be called to start the task scheduler and begin executing tasks. This
         method will block forever.
         """
-        raise NotImplementedError

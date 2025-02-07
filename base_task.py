@@ -14,10 +14,8 @@ class BaseTask(ABC):
         Returns:
             The task execution result
         """
-        raise NotImplementedError
 
     @property
     @abstractmethod
     def result(self) -> Optional[Any]:
         """The task execution result."""
-        raise NotImplementedError

@@ -13,4 +13,3 @@ class BaseSaibloClient(ABC):
         This method should be called to start the Saiblo client and begin executing tasks. This
         method will block forever.
         """
-        raise NotImplementedError
