@@ -42,30 +42,33 @@ async def main():
     # Set up everything.
     task_scheduler = TaskScheduler()
 
-    async with aiohttp.ClientSession(http_base_url) as session:
-        saiblo_client = SaibloClient(
-            name,
-            websocket_url,
-            task_scheduler,
-            BuildTaskFactory(
-                AgentCodeFetcher(session),
-                DockerImageBuilder(),
-                BuildResultReporter(session),
-            ),
-            JudgeTaskFactory(
-                game_host_image,
-                AgentCodeFetcher(session),
-                DockerImageBuilder(),
-                BuildResultReporter(session),
-                MatchJudger(),
-                MatchResultReporter(session),
-            ),
-        )
+    session = aiohttp.ClientSession(http_base_url)
 
-        await asyncio.gather(
-            asyncio.create_task(task_scheduler.start()),
-            asyncio.create_task(saiblo_client.start()),
-        )
+    saiblo_client = SaibloClient(
+        name,
+        websocket_url,
+        task_scheduler,
+        BuildTaskFactory(
+            AgentCodeFetcher(session),
+            DockerImageBuilder(),
+            BuildResultReporter(session),
+        ),
+        JudgeTaskFactory(
+            game_host_image,
+            AgentCodeFetcher(session),
+            DockerImageBuilder(),
+            BuildResultReporter(session),
+            MatchJudger(),
+            MatchResultReporter(session),
+        ),
+    )
+
+    await asyncio.gather(
+        asyncio.create_task(task_scheduler.start()),
+        asyncio.create_task(saiblo_client.start()),
+    )
+
+    await session.close()
 
 
 if __name__ == "__main__":

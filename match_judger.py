@@ -91,15 +91,11 @@ class MatchJudger(BaseMatchJudger):
         if judge_replay_base_dir_path.is_dir():
             shutil.rmtree(judge_replay_base_dir_path, ignore_errors=True)
 
-        judge_replay_base_dir_path.mkdir(parents=True, exist_ok=True)
-
         # Clean results.
         judge_result_base_dir_path = path_manager.get_judge_result_base_dir_path()
 
         if judge_result_base_dir_path.is_dir():
             shutil.rmtree(judge_result_base_dir_path, ignore_errors=True)
-
-        judge_result_base_dir_path.mkdir(parents=True, exist_ok=True)
 
     async def judge(
         self,
@@ -107,14 +103,11 @@ class MatchJudger(BaseMatchJudger):
         game_host_image: str,
         agent_images: List[Optional[str]],
     ) -> MatchResult:
-        judge_replay_base_dir_path = path_manager.get_judge_replay_base_dir_path()
-        judge_replay_base_dir_path.mkdir(parents=True, exist_ok=True)
+        judge_replay_file_path = path_manager.get_judge_replay_path(match_id)
+        judge_replay_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        judge_result_base_dir_path = path_manager.get_judge_result_base_dir_path()
-        judge_result_base_dir_path.mkdir(parents=True, exist_ok=True)
-
-        judge_replay_file_path = judge_replay_base_dir_path / f"{match_id}.dat"
-        judge_result_file_path = judge_result_base_dir_path / f"{match_id}.json"
+        judge_result_file_path = path_manager.get_judge_result_path(match_id)
+        judge_result_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # If judged before, return the result.
         if judge_replay_file_path.is_file() and judge_result_file_path.is_file():
@@ -322,10 +315,7 @@ class MatchJudger(BaseMatchJudger):
                     container.remove(v=True, force=True)
 
     async def list(self) -> Dict[str, MatchResult]:
-        judge_result_base_dir_path = path_manager.get_judge_result_base_dir_path()
-        judge_result_base_dir_path.mkdir(parents=True, exist_ok=True)
-
-        judge_result_paths = judge_result_base_dir_path.glob("*.json")
+        judge_result_paths = path_manager.get_judge_result_paths()
 
         return {
             path.stem: dacite.from_dict(MatchResult, json.load(path.open("r")))

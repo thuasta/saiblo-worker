@@ -32,13 +32,9 @@ class AgentCodeFetcher(BaseAgentCodeFetcher):
         if agent_code_base_dir_path.is_dir():
             shutil.rmtree(agent_code_base_dir_path, ignore_errors=True)
 
-        agent_code_base_dir_path.mkdir(parents=True, exist_ok=True)
-
     async def fetch(self, code_id: str) -> Path:
-        agent_code_base_dir_path = path_manager.get_agent_code_base_dir_path()
-        agent_code_base_dir_path.mkdir(parents=True, exist_ok=True)
-
-        agent_code_tarball_path = agent_code_base_dir_path / f"{code_id}.tar"
+        agent_code_tarball_path = path_manager.get_agent_code_tarball_path(code_id)
+        agent_code_tarball_path.parent.mkdir(parents=True, exist_ok=True)
 
         # If fetched, return the cached tarball.
         if agent_code_tarball_path.is_file():
@@ -68,9 +64,6 @@ class AgentCodeFetcher(BaseAgentCodeFetcher):
         return agent_code_tarball_path
 
     async def list(self) -> Dict[str, Path]:
-        agent_code_base_dir_path = path_manager.get_agent_code_base_dir_path()
-        agent_code_base_dir_path.mkdir(parents=True, exist_ok=True)
-
-        agent_code_tarball_paths = agent_code_base_dir_path.glob("*.tar")
+        agent_code_tarball_paths = path_manager.get_agent_code_tarball_paths()
 
         return {path.stem: path for path in agent_code_tarball_paths if path.is_file()}
