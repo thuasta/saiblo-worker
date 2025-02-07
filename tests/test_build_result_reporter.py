@@ -22,8 +22,8 @@ class TestBuildResultReporter(IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         await self._session.close()
 
-    async def test_report_without_image(self):
-        """Test report() without image."""
+    async def test_report_failed(self):
+        """Test report() when failed."""
         # Arrange.
         build_result = BuildResult(
             code_id=CODE_ID,
@@ -35,8 +35,8 @@ class TestBuildResultReporter(IsolatedAsyncioTestCase):
         # Act.
         await reporter.report(build_result)
 
-    async def test_report_with_image(self):
-        """Test report() with image."""
+    async def test_report_success(self):
+        """Test report() when success."""
         # Arrange.
         build_result = BuildResult(
             code_id=CODE_ID,

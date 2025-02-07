@@ -12,7 +12,6 @@ import docker
 from docker_image_builder import DockerImageBuilder
 
 CODE_ID = "7c562b10-287f-44c0-8fc4-0cf853a1859b"
-HTTP_BASE_URL = "https://api.dev.saiblo.net"
 
 
 class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
@@ -28,7 +27,6 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         )
 
         self._docker_client = docker.from_env()
-        self._session = aiohttp.ClientSession(HTTP_BASE_URL)
 
     async def asyncTearDown(self) -> None:
         shutil.rmtree(
@@ -40,7 +38,6 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
             image.remove(force=True)
 
         self._docker_client.close()
-        await self._session.close()
 
     async def test_build_image_exists(self):
         """Test build() when target image exists."""

@@ -46,7 +46,7 @@ class DockerImageBuilder(BaseDockerImageBuilder):
                 message="",
             )
 
-        except docker.errors.BuildError as e:
+        except Exception as e:  # pylint: disable=broad-except
             return BuildResult(
                 code_id=code_id,
                 image=None,

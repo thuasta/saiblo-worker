@@ -15,4 +15,3 @@ class BaseMatchResultReporter(ABC):
         Args:
             result: The result of the match
         """
-        raise NotImplementedError

@@ -131,6 +131,8 @@ class MatchJudger(BaseMatchJudger):
             for i, image in enumerate(agent_images)
         ]
 
+        game_host_container: Optional[docker.models.containers.Container] = None
+
         try:
             # Run the game host.
             game_host_container = self._client.containers.run(
@@ -242,7 +244,7 @@ class MatchJudger(BaseMatchJudger):
                         MatchResult.AgentResult(
                             exit_code=0,
                             score=0.0,
-                            status="CANCEL",
+                            status="EXIT",
                             stderr_output="",
                         )
                     )
@@ -270,6 +272,7 @@ class MatchJudger(BaseMatchJudger):
                 agent_results=agent_results,
                 error_message="",
                 replay_file_path=judge_replay_file_path,
+                stderr_output=game_host_container.logs(stdout=False).decode("utf-8"),
             )
 
         except Exception as e:  # pylint: disable=broad-except
@@ -286,6 +289,11 @@ class MatchJudger(BaseMatchJudger):
                 ],
                 error_message=str(e),
                 replay_file_path=None,
+                stderr_output=(
+                    game_host_container.logs(stdout=False).decode("utf-8")
+                    if game_host_container is not None
+                    else ""
+                ),
             )
 
         finally:
