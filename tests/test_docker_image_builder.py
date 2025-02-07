@@ -6,7 +6,6 @@ import shutil
 import tarfile
 import unittest
 
-import aiohttp
 import docker
 
 from docker_image_builder import DockerImageBuilder
