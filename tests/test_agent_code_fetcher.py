@@ -8,7 +8,7 @@ import aiohttp
 
 from agent_code_fetcher import AgentCodeFetcher
 
-CODE_ID = "a09f660a-e0e6-41ac-b721-f8ece8e71f33"
+CODE_ID = "7c562b10-287f-44c0-8fc4-0cf853a1859b"
 HTTP_BASE_URL = "https://api.dev.saiblo.net"
 
 

@@ -54,20 +54,17 @@ class DockerImageBuilder(BaseDockerImageBuilder):
             )
 
     async def clean(self) -> None:
-        images = [
-            tag
-            for image in self._client.images.list(_IMAGE_REPOSITORY)
-            for tag in image.tags
-        ]
+        images = self._client.images.list(_IMAGE_REPOSITORY)
 
-        for tag in images:
-            self._client.images.remove(tag, force=True)
+        for image in images:
+            image.remove(force=True)
 
     async def list(self) -> Dict[str, str]:
         images = [
             tag
             for image in self._client.images.list(_IMAGE_REPOSITORY)
             for tag in image.tags
+            if tag.split(":")[0] == _IMAGE_REPOSITORY
         ]
 
         return {tag.split(":")[-1]: tag for tag in images}
