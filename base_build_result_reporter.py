@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from base_docker_image_builder import BuildResult
+from build_result import BuildResult
 
 
 class BaseBuildResultReporter(ABC):
@@ -15,4 +15,3 @@ class BaseBuildResultReporter(ABC):
         Args:
             result: The result of the build
         """
-        raise NotImplementedError

@@ -6,7 +6,7 @@ from unittest import IsolatedAsyncioTestCase
 
 import aiohttp
 
-import agent_code_fetcher
+from agent_code_fetcher import AgentCodeFetcher
 
 CODE_ID = "a09f660a-e0e6-41ac-b721-f8ece8e71f33"
 HTTP_BASE_URL = "https://api.dev.saiblo.net"
@@ -39,7 +39,7 @@ class TestAgentCodeFetcher(IsolatedAsyncioTestCase):
         path = Path(f"data/agent_code/{CODE_ID}.tar")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
-        fetcher = agent_code_fetcher.AgentCodeFetcher(self._session)
+        fetcher = AgentCodeFetcher(self._session)
 
         # Act.
         await fetcher.clean()
@@ -50,7 +50,7 @@ class TestAgentCodeFetcher(IsolatedAsyncioTestCase):
     async def test_clean_no_dir(self):
         """Test clean() when directory does not exist."""
         # Arrange.
-        fetcher = agent_code_fetcher.AgentCodeFetcher(self._session)
+        fetcher = AgentCodeFetcher(self._session)
 
         # Act.
         await fetcher.clean()
@@ -64,7 +64,7 @@ class TestAgentCodeFetcher(IsolatedAsyncioTestCase):
         path = Path(f"data/agent_code/{CODE_ID}.tar")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
-        fetcher = agent_code_fetcher.AgentCodeFetcher(self._session)
+        fetcher = AgentCodeFetcher(self._session)
 
         # Act.
         result = await fetcher.fetch(CODE_ID)
@@ -76,7 +76,7 @@ class TestAgentCodeFetcher(IsolatedAsyncioTestCase):
         """Test fetch() when file needs to be downloaded."""
         # Arrange.
         path = Path(f"data/agent_code/{CODE_ID}.tar")
-        fetcher = agent_code_fetcher.AgentCodeFetcher(self._session)
+        fetcher = AgentCodeFetcher(self._session)
 
         # Act.
         result = await fetcher.fetch(CODE_ID)
@@ -92,7 +92,7 @@ class TestAgentCodeFetcher(IsolatedAsyncioTestCase):
         Path("data/agent_code").mkdir(parents=True, exist_ok=True)
         path = Path(f"data/agent_code/{CODE_ID}.tar")
         path.touch()
-        fetcher = agent_code_fetcher.AgentCodeFetcher(self._session)
+        fetcher = AgentCodeFetcher(self._session)
 
         # Act.
         result = await fetcher.list()
