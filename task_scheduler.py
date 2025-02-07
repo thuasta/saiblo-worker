@@ -13,9 +13,6 @@ class TaskScheduler(BaseTaskScheduler):
     _done_tasks: asyncio.Queue[BaseTask] = asyncio.Queue()
     _pending_tasks: asyncio.Queue[BaseTask] = asyncio.Queue()
 
-    def __init__(self) -> None:
-        pass
-
     @property
     def idle(self) -> bool:
         return self._pending_tasks.empty()
