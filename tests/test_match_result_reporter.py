@@ -65,7 +65,7 @@ class TestMatchResultReporter(unittest.IsolatedAsyncioTestCase):
     async def test_report_success(self):
         """Test report() when success."""
         # Arrange.
-        path = pathlib.Path(f"data/judge_replays/{MATCH_ID}.dat")
+        path = pathlib.Path(f"data/match_replays/{MATCH_ID}.dat")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
 
@@ -86,7 +86,7 @@ class TestMatchResultReporter(unittest.IsolatedAsyncioTestCase):
                 ),
             ],
             error_message="error_message",
-            replay_file_path=path,
+            replay_file_path=str(path),
             stderr_output="stderr_output",
         )
         reporter = MatchResultReporter(self._session)

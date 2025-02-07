@@ -11,8 +11,7 @@ class BaseMatchJudger(ABC):
 
     @abstractmethod
     async def clean(self) -> None:
-        """Cleans up judge results."""
-        raise NotImplementedError
+        """Cleans up match results."""
 
     @abstractmethod
     async def judge(
@@ -31,7 +30,6 @@ class BaseMatchJudger(ABC):
         Returns:
             The result of the match
         """
-        raise NotImplementedError
 
     @abstractmethod
     async def list(self) -> Dict[str, MatchResult]:
@@ -40,4 +38,3 @@ class BaseMatchJudger(ABC):
         Returns:
             A dictionary mapping match IDs to their corresponding MatchResult objects
         """
-        raise NotImplementedError

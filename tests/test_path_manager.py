@@ -62,59 +62,59 @@ class TestPathManager(TestCase):
         # Assert.
         self.assertEqual([path], paths)
 
-    def test_get_judge_replay_base_dir_path(self):
-        """Test getting the base directory path for judge replays."""
+    def test_get_match_replay_base_dir_path(self):
+        """Test getting the base directory path for match replays."""
         self.assertEqual(
-            Path("data/judge_replays"),
-            path_manager.get_judge_replay_base_dir_path(),
+            Path("data/match_replays"),
+            path_manager.get_match_replay_base_dir_path(),
         )
 
-    def test_get_judge_replay_path(self):
-        """Test getting the path for a specific judge replay file."""
+    def test_get_match_replay_path(self):
+        """Test getting the path for a specific match replay file."""
         # Arrange.
         match_id = "match_id"
 
         # Act.
-        path = path_manager.get_judge_replay_path(match_id)
+        path = path_manager.get_match_replay_path(match_id)
 
         # Assert.
-        self.assertEqual(Path(f"data/judge_replays/{match_id}.dat"), path)
+        self.assertEqual(Path(f"data/match_replays/{match_id}.dat"), path)
 
-    def test_get_judge_result_base_dir_path(self):
-        """Test getting the base directory path for judge results."""
+    def test_get_match_result_base_dir_path(self):
+        """Test getting the base directory path for match results."""
         self.assertEqual(
-            Path("data/judge_results"),
-            path_manager.get_judge_result_base_dir_path(),
+            Path("data/match_results"),
+            path_manager.get_match_result_base_dir_path(),
         )
 
-    def test_get_judge_result_path(self):
-        """Test getting the path for a specific judge result file."""
+    def test_get_match_result_path(self):
+        """Test getting the path for a specific match result file."""
         # Arrange.
         match_id = "match_id"
 
         # Act.
-        path = path_manager.get_judge_result_path(match_id)
+        path = path_manager.get_match_result_path(match_id)
 
         # Assert.
-        self.assertEqual(Path(f"data/judge_results/{match_id}.json"), path)
+        self.assertEqual(Path(f"data/match_results/{match_id}.json"), path)
 
-    def test_get_judge_result_paths_no_dir(self):
-        """Test getting judge result paths when directory doesn't exist."""
+    def test_get_match_result_paths_no_dir(self):
+        """Test getting match result paths when directory doesn't exist."""
         # Act.
-        paths = path_manager.get_judge_result_paths()
+        paths = path_manager.get_match_result_paths()
 
         # Assert.
         self.assertEqual([], paths)
 
-    def test_get_judge_result_paths_file_exists(self):
-        """Test getting judge result paths when files exist."""
+    def test_get_match_result_paths_file_exists(self):
+        """Test getting match result paths when files exist."""
         # Arrange.
-        path = Path("data/judge_results/match_id.json")
+        path = Path("data/match_results/match_id.json")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
 
         # Act.
-        paths = path_manager.get_judge_result_paths()
+        paths = path_manager.get_match_result_paths()
 
         # Assert.
         self.assertEqual([path], paths)

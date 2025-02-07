@@ -39,5 +39,5 @@ class MatchResult:
 
     agent_results: List[AgentResult]
     error_message: str
-    replay_file_path: Optional[Path]
+    replay_file_path: Optional[str]
     stderr_output: str

@@ -1,6 +1,7 @@
 """The implementation of the match judger."""
 
 import asyncio
+import dataclasses
 import io
 import json
 import shutil
@@ -19,10 +20,10 @@ from base_match_judger import BaseMatchJudger
 from match_result import MatchResult
 
 _AGENT_CONTAINER_NAME_PREFIX = "saiblo-worker-agent"
-_GAME_HOST_APP_DATA_DIR_PATH = "/app/data"
+_GAME_HOST_APP_DATA_DIR_PATH = "/app/data/"
 _GAME_HOST_CONTAINER_NAME_PREFIX = "saiblo-worker-game-host"
-_GAME_HOST_REPLAY_FILE_NAME = "replay.dat"
-_GAME_HOST_RESULT_FILE_NAME = "result.json"
+_GAME_HOST_REPLAY_FILE_NAME = "data/replay.dat"
+_GAME_HOST_RESULT_FILE_NAME = "data/result.json"
 _NETWORK_NAME_PREFIX = "saiblo-worker-network"
 
 JUDGE_TIMEOUT = 600  # In seconds
@@ -53,13 +54,6 @@ class _GameHostMatchResult(TypedDict):
     scores: Dict[str, float]
 
 
-class JudgeTimeoutException(Exception):
-    """Exception class for Judge timeout"""
-
-    def __init__(self):
-        pass
-
-
 class MatchJudger(BaseMatchJudger):
     """The match judger."""
 
@@ -86,16 +80,16 @@ class MatchJudger(BaseMatchJudger):
                 network.remove()
 
         # Clean replays.
-        judge_replay_base_dir_path = path_manager.get_judge_replay_base_dir_path()
+        match_replay_base_dir_path = path_manager.get_match_replay_base_dir_path()
 
-        if judge_replay_base_dir_path.is_dir():
-            shutil.rmtree(judge_replay_base_dir_path, ignore_errors=True)
+        if match_replay_base_dir_path.is_dir():
+            shutil.rmtree(match_replay_base_dir_path, ignore_errors=True)
 
         # Clean results.
-        judge_result_base_dir_path = path_manager.get_judge_result_base_dir_path()
+        match_result_base_dir_path = path_manager.get_match_result_base_dir_path()
 
-        if judge_result_base_dir_path.is_dir():
-            shutil.rmtree(judge_result_base_dir_path, ignore_errors=True)
+        if match_result_base_dir_path.is_dir():
+            shutil.rmtree(match_result_base_dir_path, ignore_errors=True)
 
     async def judge(
         self,
@@ -103,16 +97,16 @@ class MatchJudger(BaseMatchJudger):
         game_host_image: str,
         agent_images: List[Optional[str]],
     ) -> MatchResult:
-        judge_replay_file_path = path_manager.get_judge_replay_path(match_id)
-        judge_replay_file_path.parent.mkdir(parents=True, exist_ok=True)
+        match_replay_file_path = path_manager.get_match_replay_path(match_id)
+        match_replay_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        judge_result_file_path = path_manager.get_judge_result_path(match_id)
-        judge_result_file_path.parent.mkdir(parents=True, exist_ok=True)
+        match_result_file_path = path_manager.get_match_result_path(match_id)
+        match_result_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # If judged before, return the result.
-        if judge_replay_file_path.is_file() and judge_result_file_path.is_file():
+        if match_replay_file_path.is_file() and match_result_file_path.is_file():
             return dacite.from_dict(
-                MatchResult, json.load(judge_result_file_path.open("r"))
+                MatchResult, json.load(match_result_file_path.open("r"))
             )
 
         game_host_container_name = f"{_GAME_HOST_CONTAINER_NAME_PREFIX}-{match_id}"
@@ -138,6 +132,15 @@ class MatchJudger(BaseMatchJudger):
             game_host_container = self._client.containers.run(
                 game_host_image,
                 detach=True,
+                environment={
+                    "TOKENS": ",".join(
+                        [
+                            agent_info.token
+                            for agent_info in agent_info_list
+                            if agent_info
+                        ]
+                    )
+                },
                 name=game_host_container_name,
             )
 
@@ -155,13 +158,11 @@ class MatchJudger(BaseMatchJudger):
                 # Create container.
                 agent_container = self._client.containers.run(
                     agent_info.image,
-                    [
-                        "--token",
-                        agent_info.token,
-                        "--server",
-                        f"ws://{game_host_container_name}:14514",
-                    ],
                     detach=True,
+                    environment={
+                        "TOKEN": agent_info.token,
+                        "GAME_HOST": f"ws://{game_host_container_name}:14514",
+                    },
                     name=agent_info.container_name,
                 )
                 agent_containers.append(agent_container)
@@ -193,47 +194,25 @@ class MatchJudger(BaseMatchJudger):
                 game_host_app_data_tarball_bytesio.write(chunk)
 
             with tarfile.open(
-                fileobj=game_host_app_data_tarball_bytesio, mode="r"
+                fileobj=io.BytesIO(game_host_app_data_tarball_bytesio.getvalue()),
+                mode="r",
             ) as tar_file:
-                if (
-                    _GAME_HOST_REPLAY_FILE_NAME not in tar_file.getnames()
-                    or _GAME_HOST_RESULT_FILE_NAME not in tar_file.getnames()
-                ):
-                    raise FileNotFoundError("Replay or result file not found.")
-
-                result_file = tar_file.extractfile(_GAME_HOST_RESULT_FILE_NAME)
-
-                if result_file is None:
-                    raise FileNotFoundError("Cannot extract result file.")
-
-                with open(judge_result_file_path, "wb") as f:
-                    f.write(result_file.read())
-
-                replay_file = tar_file.extractfile(_GAME_HOST_REPLAY_FILE_NAME)
-
-                if replay_file is None:
-                    raise FileNotFoundError("Cannot extract replay file.")
-
-                with judge_replay_file_path.open("wb") as f:
-                    f.write(replay_file.read())
+                result_file = tar_file.extractfile(
+                    _GAME_HOST_RESULT_FILE_NAME
+                ) or io.BytesIO("{}".encode("utf-8"))
 
                 game_host_match_result: _GameHostMatchResult = json.loads(
                     result_file.read().decode("utf-8")
                 )
 
-            # Clean networks.
-            for agent_network in agent_networks:
-                if agent_network is not None:
-                    agent_network.remove()
+                replay_file = (
+                    tar_file.extractfile(_GAME_HOST_REPLAY_FILE_NAME) or io.BytesIO()
+                )
 
-            # Clean containers.
-            game_host_container.remove(v=True, force=True)
+                with match_replay_file_path.open("wb") as f:
+                    f.write(replay_file.read())
 
-            for agent_container in agent_containers:
-                if agent_container is not None:
-                    agent_container.remove(v=True, force=True)
-
-            # Return the result.
+            # Build the result.
             agent_results: List[MatchResult.AgentResult] = []
 
             for i, _ in enumerate(agent_info_list):
@@ -258,22 +237,27 @@ class MatchJudger(BaseMatchJudger):
                                 "StatusCode"
                             ],
                             score=(
-                                game_host_match_result["scores"][agent_info.token]
-                                if agent_info.token in game_host_match_result["scores"]
-                                else 0.0
+                                game_host_match_result["scores"].get(
+                                    agent_info.token, 0.0
+                                )
                             ),
                             status="OK",
                             stderr_output=container.logs(stdout=False).decode("utf-8"),
                         )
                     )
 
-            return MatchResult(
+            match_result = MatchResult(
                 match_id=match_id,
                 agent_results=agent_results,
                 error_message="",
-                replay_file_path=judge_replay_file_path,
+                replay_file_path=str(match_replay_file_path),
                 stderr_output=game_host_container.logs(stdout=False).decode("utf-8"),
             )
+
+            with open(match_result_file_path, "w", encoding="utf-8") as f:
+                json.dump(dataclasses.asdict(match_result), f)
+
+            return match_result
 
         except Exception as e:  # pylint: disable=broad-except
             return MatchResult(
@@ -323,9 +307,9 @@ class MatchJudger(BaseMatchJudger):
                     container.remove(v=True, force=True)
 
     async def list(self) -> Dict[str, MatchResult]:
-        judge_result_paths = path_manager.get_judge_result_paths()
+        match_result_paths = path_manager.get_match_result_paths()
 
         return {
             path.stem: dacite.from_dict(MatchResult, json.load(path.open("r")))
-            for path in judge_result_paths
+            for path in match_result_paths
         }
