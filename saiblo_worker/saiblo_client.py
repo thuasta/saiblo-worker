@@ -58,9 +58,10 @@ class SaibloClient(BaseSaibloClient):
                 )
 
                 await asyncio.gather(
+                    self._keep_finish_judge_task(connection),
+                    self._keep_heart_beat(connection),
                     self._keep_receive_message(connection),
                     self._keep_request_judge_task(connection),
-                    self._keep_heart_beat(connection),
                 )
 
             except ConnectionClosed:
@@ -77,11 +78,23 @@ class SaibloClient(BaseSaibloClient):
                         {
                             "type": "finish_judge_task",
                             "data": {
-                                "match_id": done_task.match_id,
+                                "match_id": int(done_task.match_id),
                             },
                         }
                     )
                 )
+
+    async def _keep_heart_beat(self, connection: ClientConnection) -> None:
+        while True:
+            await connection.send(
+                json.dumps(
+                    {
+                        "type": "heart_beat",
+                    }
+                )
+            )
+
+            await asyncio.sleep(_SEND_HEART_BEAT_INTERVAL)
 
     async def _keep_receive_message(self, connection: ClientConnection) -> None:
         while True:
@@ -123,15 +136,3 @@ class SaibloClient(BaseSaibloClient):
 
             async with self._request_judge_task_condition:
                 await self._request_judge_task_condition.wait()
-
-    async def _keep_heart_beat(self, connection: ClientConnection) -> None:
-        while True:
-            await connection.send(
-                json.dumps(
-                    {
-                        "type": "heart_beat",
-                    }
-                )
-            )
-
-            await asyncio.sleep(_SEND_HEART_BEAT_INTERVAL)
