@@ -9,48 +9,20 @@ A worker for Saiblo
 We provide a pre-built Docker image for the worker. You can run it with the following command:
 
 ```sh
-docker run -d --env-file .env ghcr.io/thuasta/saiblo-worker
-```
-
-Or set environment variables directly:
-
-```sh
 docker run -dit -e GAME_HOST_IMAGE=<your-game-host-image> -e NAME=<worker-name> --rm --privileged ghcr.io/thuasta/saiblo-worker
 ```
 
 The worker will automatically connect to the Saiblo server and start processing matches.
 
-If you want to build the Docker image yourself, follow these steps:
+If you want to build the Docker image yourself, you can run the following command:
 
-1. Build the Docker image:
-
-    ```sh
-    docker build -t saiblo-worker .
-    ```
-
-2. Run the Docker container:
-
-    ```sh
-    docker run -d --env-file .env saiblo-worker
-    ```
-
-   You can also set environment variables directly:
-
-    ```sh
-    docker run -dit -e GAME_HOST_IMAGE=<your-game-host-image> -e NAME=<worker-name> --rm --privileged saiblo-worker
-    ```
+```sh
+docker build -t saiblo-worker .
+```
 
 ### Run Manually
 
-1. Set up environment variables in a `.env` file:
-
-    ```sh
-    GAME_HOST_IMAGE=<your-game-host-image>  # Required: Docker image for the game host
-    NAME=<worker-name>                      # Required: Unique name for this worker to set on Saiblo
-
-    HTTP_BASE_URL=<url>                     # Optional: API base URL (default: https://api.dev.saiblo.net)
-    WEBSOCKET_URL=<url>                     # Optional: WebSocket URL (default: wss://api.dev.saiblo.net/ws/)
-    ```
+1. Set up environment variables in a `.env` file.
 
 2. Install dependencies:
    ```bash
@@ -62,13 +34,24 @@ If you want to build the Docker image yourself, follow these steps:
    python main.py
    ```
 
-The worker will:
-- Connect to the Saiblo server
-- Build Docker images for submitted code
-- Run matches using the game host image
-- Report results back to the server
-
 ## Environment Variables
+
+### For Saiblo Worker
+
+The worker reads the following environment variables:
+
+- `AGENT_CPUS`: CPU limit for agent containers (default: `0.5`)
+- `AGENT_MEM_LIMIT`: Memory limit for agent containers (default: `1g`)
+- `GAME_HOST_CPUS`: CPU limit for game host container (default: `1`)
+- `GAME_HOST_IMAGE`: Docker image for game host container (**required**)
+- `GAME_HOST_MEM_LIMIT`: Memory limit for game host container (default: `1g`)
+- `HTTP_BASE_URL`: Base URL for HTTP requests (default: `https://api.dev.saiblo.net`)
+- `JUDGE_TIMEOUT`: Maximum time for a match in seconds (default: `600`)
+- `LOGGING_LEVEL`: Logging level (default: `INFO`)
+- `NAME`: Name of the worker (**required**)
+- `WEBSOCKET_URL`: WebSocket URL for connecting to Saiblo (default: `wss://api.dev.saiblo.net/ws/`)
+
+### Passed to Internal Containers
 
 The worker will pass the following environment variables to the game host Docker container:
 
