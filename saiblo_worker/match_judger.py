@@ -15,9 +15,9 @@ import docker
 import docker.models.containers
 import docker.models.networks
 
-import path_manager
-from base_match_judger import BaseMatchJudger
-from match_result import MatchResult
+import saiblo_worker.path_manager as path_manager
+from saiblo_worker.base_match_judger import BaseMatchJudger
+from saiblo_worker.match_result import MatchResult
 
 _AGENT_CONTAINER_NAME_PREFIX = "saiblo-worker-agent"
 _GAME_HOST_APP_DATA_DIR_PATH = "/app/data/"

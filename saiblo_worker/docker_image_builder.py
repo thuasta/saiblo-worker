@@ -7,8 +7,8 @@ from typing import Dict
 import docker
 import docker.errors
 
-from base_docker_image_builder import BaseDockerImageBuilder
-from build_result import BuildResult
+from saiblo_worker.base_docker_image_builder import BaseDockerImageBuilder
+from saiblo_worker.build_result import BuildResult
 
 _IMAGE_REPOSITORY = "saiblo-worker-image"
 

@@ -8,10 +8,10 @@ import aiohttp
 import docker
 import docker.models.containers
 
-from agent_code_fetcher import AgentCodeFetcher
-from build_result_reporter import BuildResultReporter
-from build_task import BuildTaskFactory
-from docker_image_builder import DockerImageBuilder
+from saiblo_worker.agent_code_fetcher import AgentCodeFetcher
+from saiblo_worker.build_result_reporter import BuildResultReporter
+from saiblo_worker.build_task import BuildTaskFactory
+from saiblo_worker.docker_image_builder import DockerImageBuilder
 
 CODE_ID = "7c562b10-287f-44c0-8fc4-0cf853a1859b"
 HTTP_BASE_URL = "https://api.dev.saiblo.net"

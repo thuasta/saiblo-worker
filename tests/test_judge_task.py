@@ -10,13 +10,13 @@ import aiohttp
 import docker
 import docker.models.containers
 
-from agent_code_fetcher import AgentCodeFetcher
-from build_result_reporter import BuildResultReporter
-from docker_image_builder import DockerImageBuilder
-from judge_task import JudgeTaskFactory
-from match_judger import MatchJudger
-from match_result import MatchResult
-from match_result_reporter import MatchResultReporter
+from saiblo_worker.agent_code_fetcher import AgentCodeFetcher
+from saiblo_worker.build_result_reporter import BuildResultReporter
+from saiblo_worker.docker_image_builder import DockerImageBuilder
+from saiblo_worker.judge_task import JudgeTaskFactory
+from saiblo_worker.match_judger import MatchJudger
+from saiblo_worker.match_result import MatchResult
+from saiblo_worker.match_result_reporter import MatchResultReporter
 
 CODE_ID = "7c562b10-287f-44c0-8fc4-0cf853a1859b"
 HTTP_BASE_URL = "https://api.dev.saiblo.net"

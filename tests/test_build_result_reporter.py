@@ -4,8 +4,8 @@ from unittest import IsolatedAsyncioTestCase
 
 import aiohttp
 
-from build_result import BuildResult
-from build_result_reporter import BuildResultReporter
+from saiblo_worker.build_result import BuildResult
+from saiblo_worker.build_result_reporter import BuildResultReporter
 
 CODE_ID = "7c562b10-287f-44c0-8fc4-0cf853a1859b"
 HTTP_BASE_URL = "https://api.dev.saiblo.net"

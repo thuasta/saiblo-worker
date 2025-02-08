@@ -5,8 +5,8 @@ import json
 
 import aiohttp
 
-from base_match_result_reporter import BaseMatchResultReporter
-from match_result import MatchResult
+from saiblo_worker.base_match_result_reporter import BaseMatchResultReporter
+from saiblo_worker.match_result import MatchResult
 
 REPLAY_FILE_NAME_PREFIX = "saiblo-worker-replay"
 

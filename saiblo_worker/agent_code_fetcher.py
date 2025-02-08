@@ -9,8 +9,8 @@ from typing import Dict
 
 import aiohttp
 
-import path_manager
-from base_agent_code_fetcher import BaseAgentCodeFetcher
+import saiblo_worker.path_manager as path_manager
+from saiblo_worker.base_agent_code_fetcher import BaseAgentCodeFetcher
 
 
 class AgentCodeFetcher(BaseAgentCodeFetcher):

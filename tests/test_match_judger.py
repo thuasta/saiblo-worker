@@ -10,8 +10,8 @@ import unittest
 import docker
 import docker.models.containers
 
-from match_judger import MatchJudger
-from match_result import MatchResult
+from saiblo_worker.match_judger import MatchJudger
+from saiblo_worker.match_result import MatchResult
 
 
 class TestMatchJudger(unittest.IsolatedAsyncioTestCase):

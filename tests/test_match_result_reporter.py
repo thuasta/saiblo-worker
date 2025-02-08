@@ -6,8 +6,8 @@ import unittest
 
 import aiohttp
 
-from match_result import MatchResult
-from match_result_reporter import MatchResultReporter
+from saiblo_worker.match_result import MatchResult
+from saiblo_worker.match_result_reporter import MatchResultReporter
 
 HTTP_BASE_URL = "https://api.dev.saiblo.net"
 MATCH_ID = "7729"

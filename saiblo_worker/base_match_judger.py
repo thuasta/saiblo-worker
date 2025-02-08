@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
-from match_result import MatchResult
+from saiblo_worker.match_result import MatchResult
 
 
 class BaseMatchJudger(ABC):

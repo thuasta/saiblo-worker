@@ -3,8 +3,8 @@
 import asyncio
 import unittest
 
-from base_task import BaseTask
-from task_scheduler import TaskScheduler
+from saiblo_worker.base_task import BaseTask
+from saiblo_worker.task_scheduler import TaskScheduler
 
 
 class _TestTask(BaseTask):

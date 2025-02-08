@@ -2,8 +2,8 @@
 
 import aiohttp
 
-from base_build_result_reporter import BaseBuildResultReporter
-from build_result import BuildResult
+from saiblo_worker.base_build_result_reporter import BaseBuildResultReporter
+from saiblo_worker.build_result import BuildResult
 
 # https API
 COMPILE_RESULT_API = "/judger/codes/{}/"

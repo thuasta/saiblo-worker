@@ -8,15 +8,15 @@ import aiohttp
 import dotenv
 import yarl
 
-from agent_code_fetcher import AgentCodeFetcher
-from build_result_reporter import BuildResultReporter
-from build_task import BuildTaskFactory
-from docker_image_builder import DockerImageBuilder
-from judge_task import JudgeTaskFactory
-from match_judger import MatchJudger
-from match_result_reporter import MatchResultReporter
-from saiblo_client import SaibloClient
-from task_scheduler import TaskScheduler
+from saiblo_worker.agent_code_fetcher import AgentCodeFetcher
+from saiblo_worker.build_result_reporter import BuildResultReporter
+from saiblo_worker.build_task import BuildTaskFactory
+from saiblo_worker.docker_image_builder import DockerImageBuilder
+from saiblo_worker.judge_task import JudgeTaskFactory
+from saiblo_worker.match_judger import MatchJudger
+from saiblo_worker.match_result_reporter import MatchResultReporter
+from saiblo_worker.saiblo_client import SaibloClient
+from saiblo_worker.task_scheduler import TaskScheduler
 
 
 async def main():

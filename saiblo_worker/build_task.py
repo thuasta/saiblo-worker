@@ -3,11 +3,11 @@
 import logging
 from typing import Optional
 
-from base_agent_code_fetcher import BaseAgentCodeFetcher
-from base_build_result_reporter import BaseBuildResultReporter
-from base_docker_image_builder import BaseDockerImageBuilder
-from base_task import BaseTask
-from build_result import BuildResult
+from saiblo_worker.base_agent_code_fetcher import BaseAgentCodeFetcher
+from saiblo_worker.base_build_result_reporter import BaseBuildResultReporter
+from saiblo_worker.base_docker_image_builder import BaseDockerImageBuilder
+from saiblo_worker.base_task import BaseTask
+from saiblo_worker.build_result import BuildResult
 
 
 class BuildTask(BaseTask):

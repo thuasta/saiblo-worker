@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from build_result import BuildResult
+from saiblo_worker.build_result import BuildResult
 
 
 class BaseBuildResultReporter(ABC):

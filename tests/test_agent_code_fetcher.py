@@ -6,7 +6,7 @@ from unittest import IsolatedAsyncioTestCase
 
 import aiohttp
 
-from agent_code_fetcher import AgentCodeFetcher
+from saiblo_worker.agent_code_fetcher import AgentCodeFetcher
 
 CODE_ID = "7c562b10-287f-44c0-8fc4-0cf853a1859b"
 HTTP_BASE_URL = "https://api.dev.saiblo.net"

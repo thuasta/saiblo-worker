@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from unittest import TestCase
 
-import path_manager
+import saiblo_worker.path_manager as path_manager
 
 
 class TestPathManager(TestCase):

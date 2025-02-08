@@ -8,7 +8,7 @@ import unittest
 
 import docker
 
-from docker_image_builder import DockerImageBuilder
+from saiblo_worker.docker_image_builder import DockerImageBuilder
 
 
 class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):

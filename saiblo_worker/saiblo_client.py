@@ -7,10 +7,10 @@ import logging
 import websockets.asyncio.client
 from websockets import ClientConnection, ConnectionClosed
 
-from base_saiblo_client import BaseSaibloClient
-from base_task_scheduler import BaseTaskScheduler
-from build_task import BuildTaskFactory
-from judge_task import JudgeTask, JudgeTaskFactory
+from saiblo_worker.base_saiblo_client import BaseSaibloClient
+from saiblo_worker.base_task_scheduler import BaseTaskScheduler
+from saiblo_worker.build_task import BuildTaskFactory
+from saiblo_worker.judge_task import JudgeTask, JudgeTaskFactory
 
 _CHECK_TASK_SCHEDULER_IDLE_INTERVAL = 1
 _SEND_HEART_BEAT_INTERVAL = 3

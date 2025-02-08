@@ -3,8 +3,8 @@
 import asyncio
 import logging
 
-from base_task import BaseTask
-from base_task_scheduler import BaseTaskScheduler
+from saiblo_worker.base_task import BaseTask
+from saiblo_worker.base_task_scheduler import BaseTaskScheduler
 
 
 class TaskScheduler(BaseTaskScheduler):

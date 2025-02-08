@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from base_task import BaseTask
+from saiblo_worker.base_task import BaseTask
 
 
 class BaseTaskScheduler(ABC):
