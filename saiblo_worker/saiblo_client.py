@@ -2,19 +2,15 @@
 
 import asyncio
 import json
+import logging
 
 import websockets.asyncio.client
 from websockets import ClientConnection, ConnectionClosed
 
-from base_agent_code_fetcher import BaseAgentCodeFetcher
-from base_build_result_reporter import BaseBuildResultReporter
-from base_docker_image_builder import BaseDockerImageBuilder
-from base_match_judger import BaseMatchJudger
-from base_match_result_reporter import BaseMatchResultReporter
-from base_saiblo_client import BaseSaibloClient
-from base_task_scheduler import BaseTaskScheduler
-from build_task import BuildTask
-from judge_task import JudgeTask
+from saiblo_worker.base_saiblo_client import BaseSaibloClient
+from saiblo_worker.base_task_scheduler import BaseTaskScheduler
+from saiblo_worker.build_task import BuildTaskFactory
+from saiblo_worker.judge_task import JudgeTask, JudgeTaskFactory
 
 _CHECK_TASK_SCHEDULER_IDLE_INTERVAL = 1
 _SEND_HEART_BEAT_INTERVAL = 3
@@ -23,13 +19,9 @@ _SEND_HEART_BEAT_INTERVAL = 3
 class SaibloClient(BaseSaibloClient):
     """The Saiblo client."""
 
+    _build_task_factory: BuildTaskFactory
+    _judge_task_factory: JudgeTaskFactory
     _name: str
-    _agent_code_fetcher: BaseAgentCodeFetcher
-    _build_result_reporter: BaseBuildResultReporter
-    _docker_image_builder: BaseDockerImageBuilder
-    _game_host_image: str
-    _match_judger: BaseMatchJudger
-    _match_result_reporter: BaseMatchResultReporter
     _request_judge_task_condition: asyncio.Condition = asyncio.Condition()
     _task_scheduler: BaseTaskScheduler
     _websocket_url: str
@@ -39,26 +31,20 @@ class SaibloClient(BaseSaibloClient):
         name: str,
         websocket_url: str,
         task_scheduler: BaseTaskScheduler,
-        game_host_image: str,
-        agent_code_fetcher: BaseAgentCodeFetcher,
-        build_result_reporter: BaseBuildResultReporter,
-        docker_image_builder: BaseDockerImageBuilder,
-        match_judger: BaseMatchJudger,
-        match_result_reporter: BaseMatchResultReporter,
+        build_task_factory: BuildTaskFactory,
+        judge_task_factory: JudgeTaskFactory,
     ):
         self._name = name
         self._websocket_url = websocket_url
         self._task_scheduler = task_scheduler
-        self._game_host_image = game_host_image
-        self._agent_code_fetcher = agent_code_fetcher
-        self._build_result_reporter = build_result_reporter
-        self._docker_image_builder = docker_image_builder
-        self._match_judger = match_judger
-        self._match_result_reporter = match_result_reporter
+        self._build_task_factory = build_task_factory
+        self._judge_task_factory = judge_task_factory
 
     async def start(self) -> None:
         async for connection in websockets.asyncio.client.connect(self._websocket_url):
             try:
+                logging.info("Connected to %s", self._websocket_url)
+
                 await connection.send(
                     json.dumps(
                         {
@@ -78,6 +64,7 @@ class SaibloClient(BaseSaibloClient):
                 )
 
             except ConnectionClosed:
+                logging.error("Connection closed. Reconnecting...")
                 continue
 
     async def _keep_finish_judge_task(self, connection: ClientConnection) -> None:
@@ -102,27 +89,17 @@ class SaibloClient(BaseSaibloClient):
 
             match message["type"]:
                 case "compilation_task":
-                    task = BuildTask(
-                        message["data"]["code_id"],
-                        self._agent_code_fetcher,
-                        self._docker_image_builder,
-                        self._build_result_reporter,
-                    )
+                    task = self._build_task_factory.create(message["data"]["code_id"])
 
                     await self._task_scheduler.schedule(task)
 
                 case "judge_task":
-                    self._request_judge_task_condition.notify()
+                    async with self._request_judge_task_condition:
+                        self._request_judge_task_condition.notify()
 
-                    task = JudgeTask(
-                        message["data"]["match_id"],
-                        self._game_host_image,
+                    task = self._judge_task_factory.create(
+                        str(message["data"]["match_id"]),
                         [x["code_id"] for x in message["data"]["players"]],
-                        self._agent_code_fetcher,
-                        self._docker_image_builder,
-                        self._build_result_reporter,
-                        self._match_judger,
-                        self._match_result_reporter,
                     )
 
                     await self._task_scheduler.schedule(task)

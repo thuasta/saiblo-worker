@@ -7,8 +7,8 @@ from typing import Dict
 import docker
 import docker.errors
 
-from base_docker_image_builder import BaseDockerImageBuilder
-from build_result import BuildResult
+from saiblo_worker.base_docker_image_builder import BaseDockerImageBuilder
+from saiblo_worker.build_result import BuildResult
 
 _IMAGE_REPOSITORY = "saiblo-worker-image"
 
@@ -46,7 +46,7 @@ class DockerImageBuilder(BaseDockerImageBuilder):
                 message="",
             )
 
-        except docker.errors.BuildError as e:
+        except Exception as e:  # pylint: disable=broad-except
             return BuildResult(
                 code_id=code_id,
                 image=None,
@@ -54,20 +54,17 @@ class DockerImageBuilder(BaseDockerImageBuilder):
             )
 
     async def clean(self) -> None:
-        images = [
-            tag
-            for image in self._client.images.list(_IMAGE_REPOSITORY)
-            for tag in image.tags
-        ]
+        images = self._client.images.list(_IMAGE_REPOSITORY)
 
-        for tag in images:
-            self._client.images.remove(tag, force=True)
+        for image in images:
+            image.remove(force=True)
 
     async def list(self) -> Dict[str, str]:
         images = [
             tag
             for image in self._client.images.list(_IMAGE_REPOSITORY)
             for tag in image.tags
+            if tag.split(":")[0] == _IMAGE_REPOSITORY
         ]
 
         return {tag.split(":")[-1]: tag for tag in images}

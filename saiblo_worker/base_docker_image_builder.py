@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict
 
-from build_result import BuildResult
+from saiblo_worker.build_result import BuildResult
 
 
 class BaseDockerImageBuilder(ABC):
@@ -23,12 +23,10 @@ class BaseDockerImageBuilder(ABC):
         Returns:
             The tag to use for the docker image
         """
-        raise NotImplementedError
 
     @abstractmethod
     async def clean(self) -> None:
         """Removes all Docker images built by this builder."""
-        raise NotImplementedError
 
     @abstractmethod
     async def list(self) -> Dict[str, str]:
@@ -37,4 +35,3 @@ class BaseDockerImageBuilder(ABC):
         Returns:
             A dictionary mapping code IDs to the tags of their corresponding Docker images
         """
-        raise NotImplementedError

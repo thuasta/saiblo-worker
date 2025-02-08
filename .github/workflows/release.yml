@@ -1,0 +1,52 @@
+on:
+  release:
+    types: 
+      - published
+
+env:
+  REGISTRY: ghcr.io
+  NAMESPACE: thuasta
+  IMAGE_NAME: saiblo-worker
+
+jobs:
+  publish-docker-image:
+    permissions:
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: get-version
+        uses: frabert/replace-string-action@v2
+        with:
+          pattern: '^v'
+          string: ${{ github.event.release.tag_name }}
+          replace-with: ''
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ steps.get-version.outputs.replaced }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest
+
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: extract-release-notes
+        uses: ffurrer2/extract-release-notes@v2
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ${{ steps.extract-release-notes.outputs.release_notes }}

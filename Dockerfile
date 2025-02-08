@@ -3,4 +3,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
 COPY . .
-ENTRYPOINT ["python", "main.py"]
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x entrypoint.sh
+ENTRYPOINT ["entrypoint.sh"]

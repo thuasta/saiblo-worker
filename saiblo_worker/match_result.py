@@ -1,7 +1,6 @@
 """Contains the match result."""
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List, Literal, Optional
 
 
@@ -39,4 +38,5 @@ class MatchResult:
 
     agent_results: List[AgentResult]
     error_message: str
-    replay_file_path: Optional[Path]
+    replay_file_path: Optional[str]
+    stderr_output: str

@@ -3,8 +3,8 @@
 import asyncio
 import logging
 
-from base_task import BaseTask
-from base_task_scheduler import BaseTaskScheduler
+from saiblo_worker.base_task import BaseTask
+from saiblo_worker.base_task_scheduler import BaseTaskScheduler
 
 
 class TaskScheduler(BaseTaskScheduler):
@@ -12,9 +12,6 @@ class TaskScheduler(BaseTaskScheduler):
 
     _done_tasks: asyncio.Queue[BaseTask] = asyncio.Queue()
     _pending_tasks: asyncio.Queue[BaseTask] = asyncio.Queue()
-
-    def __init__(self) -> None:
-        pass
 
     @property
     def idle(self) -> bool:
@@ -42,6 +39,8 @@ class TaskScheduler(BaseTaskScheduler):
     async def start(self) -> None:
         while True:
             task = await self._pending_tasks.get()
+
+            logging.info("Executing task %s", type(task).__name__)
 
             try:
                 await task.execute()
