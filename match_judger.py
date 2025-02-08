@@ -20,15 +20,10 @@ from base_match_judger import BaseMatchJudger
 from match_result import MatchResult
 
 _AGENT_CONTAINER_NAME_PREFIX = "saiblo-worker-agent"
-_AGENT_MEM_LIMIT = "1g"
-_AGENT_NANO_CPUS = 500000000  # 0.5 CPU
 _GAME_HOST_APP_DATA_DIR_PATH = "/app/data/"
 _GAME_HOST_CONTAINER_NAME_PREFIX = "saiblo-worker-game-host"
-_GAME_HOST_MEM_LIMIT = "1.8g"
-_GAME_HOST_NANO_CPUS = 900000000  # 0.9 CPU
 _GAME_HOST_REPLAY_FILE_NAME = "data/replay.dat"
 _GAME_HOST_RESULT_FILE_NAME = "data/result.json"
-_JUDGE_TIMEOUT = 600  # In seconds
 _NETWORK_NAME_PREFIX = "saiblo-worker-network"
 
 
@@ -60,12 +55,43 @@ class _GameHostMatchResult(TypedDict):
 class MatchJudger(BaseMatchJudger):
     """The match judger."""
 
-    def __init__(self):
-        self._client = docker.from_env()
+    _agent_mem_limit: str
+    _agent_nano_cpus: int
+    _docker_client: docker.DockerClient
+    _game_host_mem_limit: str
+    _game_host_nano_cpus: int
+    _judge_timeout: float
+
+    def __init__(
+        self,
+        *,
+        agent_cpus: float,
+        agent_mem_limit: str,
+        game_host_cpus: float,
+        game_host_mem_limit: str,
+        judge_timeout: float,
+    ) -> None:
+        """Initialize the match judger.
+
+        Args:
+            agent_mem_limit: The memory limit for an agent container.
+            agent_cpus: The CPU shares for an agent container.
+            game_host_mem_limit: The memory limit for a game host container.
+            game_host_cpus: The CPU shares for a game host container.
+            judge_timeout: The timeout for judging a match.
+        """
+
+        self._agent_nano_cpus = int(agent_cpus * 1e9)
+        self._agent_mem_limit = agent_mem_limit
+        self._game_host_nano_cpus = int(game_host_cpus * 1e9)
+        self._game_host_mem_limit = game_host_mem_limit
+        self._judge_timeout = judge_timeout
+
+        self._docker_client = docker.from_env()
 
     async def clean(self) -> None:
         # Clean containers.
-        for container in self._client.containers.list(all=True):
+        for container in self._docker_client.containers.list(all=True):
             assert isinstance(container, docker.models.containers.Container)
 
             if container.name is not None and (
@@ -76,7 +102,7 @@ class MatchJudger(BaseMatchJudger):
                 container.remove(v=True, force=True)
 
         # Clean networks.
-        for network in self._client.networks.list():
+        for network in self._docker_client.networks.list():
             if network.name is not None and network.name.startswith(
                 _NETWORK_NAME_PREFIX
             ):
@@ -132,7 +158,7 @@ class MatchJudger(BaseMatchJudger):
 
         try:
             # Run the game host.
-            game_host_container = self._client.containers.run(
+            game_host_container = self._docker_client.containers.run(
                 game_host_image,
                 detach=True,
                 environment={
@@ -144,9 +170,9 @@ class MatchJudger(BaseMatchJudger):
                         ]
                     )
                 },
-                mem_limit=_GAME_HOST_MEM_LIMIT,
+                mem_limit=self._game_host_mem_limit,
                 name=game_host_container_name,
-                nano_cpus=_GAME_HOST_NANO_CPUS,
+                nano_cpus=self._game_host_nano_cpus,
             )
 
             # Run agent containers.
@@ -161,27 +187,31 @@ class MatchJudger(BaseMatchJudger):
                     continue
 
                 # Create container.
-                agent_container = self._client.containers.run(
+                agent_container = self._docker_client.containers.run(
                     agent_info.image,
                     detach=True,
                     environment={
                         "TOKEN": agent_info.token,
                         "GAME_HOST": f"ws://{game_host_container_name}:14514",
                     },
-                    mem_limit=_AGENT_MEM_LIMIT,
+                    mem_limit=self._agent_mem_limit,
                     name=agent_info.container_name,
-                    network=agent_info.network_name,
+                    nano_cpus=self._agent_nano_cpus,
                 )
                 agent_containers.append(agent_container)
 
                 # Create network.
-                agent_network = self._client.networks.create(agent_info.network_name)
+                agent_network = self._docker_client.networks.create(
+                    agent_info.network_name
+                )
                 agent_network.connect(game_host_container_name)
                 agent_network.connect(agent_info.container_name)
                 agent_networks.append(agent_network)
 
             # Wait until the game host finishes or timeout.
-            await asyncio.to_thread(game_host_container.wait, timeout=_JUDGE_TIMEOUT)
+            await asyncio.to_thread(
+                game_host_container.wait, timeout=self._judge_timeout
+            )
 
             # Stop the game host and agent containers.
             # For game host, we give it some time after SIGTERM to write the result file.
@@ -291,7 +321,7 @@ class MatchJudger(BaseMatchJudger):
 
         finally:
             # Clean networks.
-            for network in self._client.networks.list():
+            for network in self._docker_client.networks.list():
                 if network.name is not None and network.name in [
                     agent_info.network_name
                     for agent_info in agent_info_list
@@ -300,7 +330,7 @@ class MatchJudger(BaseMatchJudger):
                     network.remove()
 
             # Clean containers.
-            for container in self._client.containers.list(all=True):
+            for container in self._docker_client.containers.list(all=True):
                 assert isinstance(container, docker.models.containers.Container)
 
                 if container.name is not None and (

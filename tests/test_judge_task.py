@@ -39,7 +39,13 @@ class TestJudgeTask(unittest.IsolatedAsyncioTestCase):
             AgentCodeFetcher(self._session),
             DockerImageBuilder(),
             BuildResultReporter(self._session),
-            MatchJudger(),
+            MatchJudger(
+                agent_mem_limit="1g",
+                agent_cpus=1,
+                game_host_mem_limit="1g",
+                game_host_cpus=1,
+                judge_timeout=60,
+            ),
             MatchResultReporter(self._session),
         )
 

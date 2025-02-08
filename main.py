@@ -18,10 +18,6 @@ from match_result_reporter import MatchResultReporter
 from saiblo_client import SaibloClient
 from task_scheduler import TaskScheduler
 
-DEFAULT_HTTP_BASE_URL = "https://api.dev.saiblo.net"
-DEFAULT_LOGGING_LEVEL = "INFO"
-DEFAULT_WEBSOCKET_URL = "wss://api.dev.saiblo.net/ws/"
-
 
 async def main():
     """Main function."""
@@ -29,19 +25,27 @@ async def main():
     # Load environment variables.
     dotenv.load_dotenv()
 
+    agent_cpus = float(os.getenv("AGENT_CPUS", "0.5"))
+
+    agent_mem_limit = os.getenv("AGENT_MEM_LIMIT", "1g")
+
+    game_host_cpus = float(os.getenv("GAME_HOST_CPUS", "1"))
+
     game_host_image = os.getenv("GAME_HOST_IMAGE")
-    if game_host_image is None:
-        raise ValueError("GAME_HOST_IMAGE must be set")
+    assert game_host_image is not None, "GAME_HOST_IMAGE must be set"
+
+    game_host_mem_limit = os.getenv("GAME_HOST_MEM_LIMIT", "1g")
+
+    http_base_url = yarl.URL(os.getenv("HTTP_BASE_URL", "https://api.dev.saiblo.net"))
+
+    judge_timeout = float(os.getenv("JUDGE_TIMEOUT", "600"))
+
+    logging_level = os.getenv("LOGGING_LEVEL", "INFO")
 
     name = os.getenv("NAME")
-    if name is None:
-        raise ValueError("NAME must be set")
+    assert name is not None, "NAME must be set"
 
-    http_base_url = yarl.URL(os.getenv("HTTP_BASE_URL", DEFAULT_HTTP_BASE_URL))
-
-    logging_level = os.getenv("LOGGING_LEVEL", DEFAULT_LOGGING_LEVEL)
-
-    websocket_url = os.getenv("WEBSOCKET_URL", DEFAULT_WEBSOCKET_URL)
+    websocket_url = os.getenv("WEBSOCKET_URL", "wss://api.dev.saiblo.net/ws/")
 
     # Set up everything.
     logging.getLogger().setLevel(logging_level)
@@ -64,7 +68,13 @@ async def main():
             AgentCodeFetcher(session),
             DockerImageBuilder(),
             BuildResultReporter(session),
-            MatchJudger(),
+            MatchJudger(
+                agent_cpus=agent_cpus,
+                agent_mem_limit=agent_mem_limit,
+                game_host_cpus=game_host_cpus,
+                game_host_mem_limit=game_host_mem_limit,
+                judge_timeout=judge_timeout,
+            ),
             MatchResultReporter(session),
         ),
     )

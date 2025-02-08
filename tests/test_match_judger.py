@@ -48,7 +48,13 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
         result_file_path.parent.mkdir(parents=True, exist_ok=True)
         result_file_path.touch()
 
-        match_judger = MatchJudger()
+        match_judger = MatchJudger(
+            agent_mem_limit="1g",
+            agent_cpus=1,
+            game_host_mem_limit="1g",
+            game_host_cpus=1,
+            judge_timeout=60,
+        )
 
         # Act.
         await match_judger.clean()
@@ -65,7 +71,13 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
         )
         self._docker_client.networks.create("saiblo-worker-test-0")
 
-        match_judger = MatchJudger()
+        match_judger = MatchJudger(
+            agent_mem_limit="1g",
+            agent_cpus=1,
+            game_host_mem_limit="1g",
+            game_host_cpus=1,
+            judge_timeout=60,
+        )
 
         # Act.
         await match_judger.clean()
@@ -87,7 +99,13 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
     async def test_judge_no_result_nor_replay(self):
         """Test judge() when there is no result nor replay."""
         # Arrange.
-        match_judger = MatchJudger()
+        match_judger = MatchJudger(
+            agent_mem_limit="1g",
+            agent_cpus=1,
+            game_host_mem_limit="1g",
+            game_host_cpus=1,
+            judge_timeout=60,
+        )
 
         # Act.
         result = await match_judger.judge("match_id", "hello-world", [])
@@ -117,7 +135,13 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
                 tag="saiblo-worker-test",
             )
 
-        match_judger = MatchJudger()
+        match_judger = MatchJudger(
+            agent_mem_limit="1g",
+            agent_cpus=1,
+            game_host_mem_limit="1g",
+            game_host_cpus=1,
+            judge_timeout=60,
+        )
 
         # Act.
         result = await match_judger.judge(
@@ -163,7 +187,13 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
                 file,
             )
 
-        match_judger = MatchJudger()
+        match_judger = MatchJudger(
+            agent_mem_limit="1g",
+            agent_cpus=1,
+            game_host_mem_limit="1g",
+            game_host_cpus=1,
+            judge_timeout=60,
+        )
 
         # Act.
         result = await match_judger.judge("match_id", "", [])
@@ -189,7 +219,13 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
                 file,
             )
 
-        match_judger = MatchJudger()
+        match_judger = MatchJudger(
+            agent_mem_limit="1g",
+            agent_cpus=1,
+            game_host_mem_limit="1g",
+            game_host_cpus=1,
+            judge_timeout=60,
+        )
 
         # Act.
         result = await match_judger.list()
