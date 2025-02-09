@@ -9,7 +9,7 @@ A robust worker implementation for the Saiblo platform
 The easiest way to get started is using our pre-built Docker image:
 
 ```sh
-docker run -dit -e GAME_HOST_IMAGE=<your-game-host-image> -e NAME=<worker-name> --rm --privileged ghcr.io/thuasta/saiblo-worker
+docker run -dit -e GAME_HOST_IMAGE=<your-game-host-image> -e NAME=<worker-name> --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock --rm ghcr.io/thuasta/saiblo-worker
 ```
 
 Once launched, the worker will establish a connection to the Saiblo server and begin processing matches.
