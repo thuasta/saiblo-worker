@@ -107,15 +107,15 @@ class SaibloClient(BaseSaibloClient):
                     await self._task_scheduler.schedule(task)
 
                 case "judge_task":
-                    async with self._request_judge_task_condition:
-                        self._request_judge_task_condition.notify()
-
                     task = self._judge_task_factory.create(
                         str(message["data"]["match_id"]),
                         [x["code_id"] for x in message["data"]["players"]],
                     )
 
                     await self._task_scheduler.schedule(task)
+
+                    async with self._request_judge_task_condition:
+                        self._request_judge_task_condition.notify()
 
     async def _keep_request_judge_task(self, connection: ClientConnection) -> None:
         while True:
