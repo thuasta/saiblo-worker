@@ -124,7 +124,8 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory("w") as dir_path:
             with open(f"{dir_path}/Dockerfile", "wb") as file:
                 file.write(
-                    b"FROM hello-world\nCOPY result.json /app/data/result.json\nCOPY replay.dat /app/data/replay.dat\n"
+                    b"FROM hello-world\nCOPY result.json /app/data/result.json\n"
+                    b"COPY replay.dat /app/data/replay.dat\n"
                 )
             with open(f"{dir_path}/result.json", "w", encoding="utf-8") as file:
                 json.dump({"scores": {}}, file)

@@ -1,77 +1,81 @@
 # saiblo-worker
 
-A worker for Saiblo
+A robust worker implementation for the Saiblo platform
 
 ## Usage
 
-### Run with Docker
+### Docker Deployment
 
-We provide a pre-built Docker image for the worker. You can run it with the following command:
+The easiest way to get started is using our pre-built Docker image:
 
 ```sh
 docker run -dit -e GAME_HOST_IMAGE=<your-game-host-image> -e NAME=<worker-name> --rm --privileged ghcr.io/thuasta/saiblo-worker
 ```
 
-The worker will automatically connect to the Saiblo server and start processing matches.
+Once launched, the worker will establish a connection to the Saiblo server and begin processing matches.
 
-If you want to build the Docker image yourself, you can run the following command:
+To build the image locally:
 
 ```sh
 docker build -t saiblo-worker .
 ```
 
-### Run Manually
+### Manual Setup
 
-1. Set up environment variables in a `.env` file.
+1. Ensure you have Docker 27.5 and Python 3.13 installed (other versions might work but aren't officially supported)
 
-2. Install dependencies:
+2. Create a `.env` file with your configuration
+
+3. Install required packages:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Run the worker:
+4. Launch the worker:
    ```bash
    python main.py
    ```
 
-## Environment Variables
+## Configuration
 
-### For Saiblo Worker
+### Worker Configuration
 
-The worker reads the following environment variables:
+The following environment variables control the worker's behavior:
 
-- `AGENT_CPUS`: CPU limit for agent containers (default: `0.5`)
-- `AGENT_MEM_LIMIT`: Memory limit for agent containers (default: `1g`)
-- `GAME_HOST_CPUS`: CPU limit for game host container (default: `1`)
-- `GAME_HOST_IMAGE`: Docker image for game host container (**required**)
-- `GAME_HOST_MEM_LIMIT`: Memory limit for game host container (default: `1g`)
-- `HTTP_BASE_URL`: Base URL for HTTP requests (default: `https://api.dev.saiblo.net`)
-- `JUDGE_TIMEOUT`: Maximum time for a match in seconds (default: `600`)
-- `LOGGING_LEVEL`: Logging level (default: `INFO`)
-- `NAME`: Name of the worker (**required**)
-- `WEBSOCKET_URL`: WebSocket URL for connecting to Saiblo (default: `wss://api.dev.saiblo.net/ws/`)
+- `AGENT_CPUS`: Agent container CPU allocation (default: `0.5`)
+- `AGENT_MEM_LIMIT`: Agent container memory limit (default: `1g`)
+- `GAME_HOST_CPUS`: Game host container CPU allocation (default: `1`)
+- `GAME_HOST_IMAGE`: Game host container image name (**required**)
+- `GAME_HOST_MEM_LIMIT`: Game host container memory limit (default: `1g`)
+- `HTTP_BASE_URL`: API endpoint base URL (default: `https://api.dev.saiblo.net`)
+- `JUDGE_TIMEOUT`: Match duration limit in seconds (default: `600`)
+- `LOGGING_LEVEL`: Logging verbosity level (default: `INFO`)
+- `NAME`: Worker identifier (**required**)
+- `WEBSOCKET_URL`: Saiblo WebSocket endpoint (default: `wss://api.dev.saiblo.net/ws/`)
 
-### Passed to Internal Containers
+### Container Environment Variables
 
-The worker will pass the following environment variables to the game host Docker container:
+The worker automatically injects these environment variables:
 
-- `TOKENS`: A comma-separated list of tokens for the players
+Game host container:
+- `TOKENS`: Comma-separated player tokens
 
-And the following environment variables to the agent Docker container:
+Agent container:
+- `TOKEN`: Player-specific token
+- `GAME_HOST`: Game host service address
 
-- `TOKEN`: The token for the player
-- `GAME_HOST`: The address of the game host
+## Match Results
 
-## Match Result Retrieval
+After each match, the game host container must generate two files:
 
-The worker will automatically retrieve match results from the Saiblo server after each match. For the game host Docker image, make sure after each match these files are created:
+- `/app/data/result.json`: Match outcome and statistics
+- `/app/data/replay.dat`: Binary replay data
 
-- `/app/data/result.json`: The match result in JSON format
-- `/app/data/replay.dat`: The match replay in binary format
+The worker automatically processes these files and reports results to the Saiblo server.
 
 ## Contributing
 
-PRs are welcome!
+We welcome contributions! Feel free to submit pull requests.
 
 ## License
 
