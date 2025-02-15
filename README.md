@@ -53,7 +53,7 @@ The following environment variables control the worker's behavior:
 - `NAME`: Worker identifier (**required**)
 - `WEBSOCKET_URL`: Saiblo WebSocket endpoint (default: `wss://api.dev.saiblo.net/ws/`)
 
-### Container Environment Variables
+### Container Setup
 
 The worker automatically injects these environment variables:
 
@@ -63,6 +63,8 @@ Game host container:
 Agent container:
 - `TOKEN`: Player-specific token
 - `GAME_HOST`: Game host service address
+
+Check out [the examples directory](examples/) for agent and game host image examples.
 
 ## Match Results
 
