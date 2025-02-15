@@ -69,6 +69,17 @@ Agent container:
 After each match, the game host container must generate two files:
 
 - `/app/data/result.json`: Match outcome and statistics
+
+  Example:
+  ```json
+  {
+     "scores": {
+        "token_1": 1.14,
+        "token_2": 5.14
+     }
+  }
+  ```
+
 - `/app/data/replay.dat`: Binary replay data
 
 The worker automatically processes these files and reports results to the Saiblo server.
