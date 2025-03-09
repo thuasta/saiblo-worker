@@ -41,7 +41,7 @@ class TaskScheduler(BaseTaskScheduler):
             task = await self._pending_tasks.get()
 
             try:
-                logging.info("Executing task %s", task)
+                logging.debug("Executing task %s", task)
 
                 await task.execute()
 

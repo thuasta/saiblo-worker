@@ -15,6 +15,8 @@ import dacite
 import docker
 import docker.models.containers
 import docker.models.networks
+import requests
+import urllib3
 
 import saiblo_worker.path_manager as path_manager
 from saiblo_worker.base_match_judger import BaseMatchJudger
@@ -91,7 +93,7 @@ class MatchJudger(BaseMatchJudger):
         self._docker_client = docker.from_env()
 
     async def clean(self) -> None:
-        logging.info("Cleaning match judger environment")
+        logging.debug("Cleaning match judger environment")
 
         # Clean containers.
         for container in self._docker_client.containers.list(all=True):
@@ -131,7 +133,7 @@ class MatchJudger(BaseMatchJudger):
         game_host_image: str,
         agent_images: List[Optional[str]],
     ) -> MatchResult:
-        logging.info("Judging match %s", match_id)
+        logging.debug("Judging match %s", match_id)
 
         match_replay_file_path = path_manager.get_match_replay_path(match_id)
         match_replay_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -165,6 +167,8 @@ class MatchJudger(BaseMatchJudger):
 
         try:
             # Run the game host.
+            logging.debug("Running game host container %s", game_host_container_name)
+
             game_host_container = await asyncio.to_thread(
                 self._docker_client.containers.run,
                 game_host_image,
@@ -195,7 +199,9 @@ class MatchJudger(BaseMatchJudger):
                     agent_networks.append(None)
                     continue
 
-                # Create container.
+                # Run the agent.
+                logging.debug("Running agent container %s", agent_info.container_name)
+
                 agent_container = await asyncio.to_thread(
                     self._docker_client.containers.run,
                     agent_info.image,
@@ -212,6 +218,12 @@ class MatchJudger(BaseMatchJudger):
                 agent_containers.append(agent_container)
 
                 # Create network.
+                logging.debug(
+                    "Creating network %s for agent %s",
+                    agent_info.network_name,
+                    agent_info.container_name,
+                )
+
                 agent_network = self._docker_client.networks.create(
                     agent_info.network_name
                 )
@@ -220,20 +232,36 @@ class MatchJudger(BaseMatchJudger):
                 agent_networks.append(agent_network)
 
             # Wait until the game host finishes or timeout.
-            await asyncio.to_thread(
-                game_host_container.wait,
-                timeout=self._judge_timeout,
+            logging.debug(
+                "Waiting for game host container %s", game_host_container_name
             )
+
+            try:
+                await asyncio.to_thread(
+                    game_host_container.wait,
+                    timeout=self._judge_timeout,
+                )
+            except requests.exceptions.ConnectionError as e:
+                if len(e.args) == 1 and isinstance(
+                    e.args[0],
+                    urllib3.exceptions.ReadTimeoutError,
+                ):
+                    raise TimeoutError("Game host timeout") from e
+
+                raise
 
             # Stop the game host and agent containers.
             # For game host, we give it some time after SIGTERM to write the result file.
+            logging.debug("Stopping game host container %s", game_host_container_name)
+
             game_host_container.stop()
 
-            for agent_container in agent_containers:
-                if agent_container is not None:
-                    agent_container.stop(timeout=0)
-
             # Get and save the result and the replay file.
+            logging.debug(
+                "Getting result and replay file from game host container %s",
+                game_host_container_name,
+            )
+
             game_host_app_data_tarball_stream, _ = game_host_container.get_archive(
                 _GAME_HOST_APP_DATA_DIR_PATH
             )
@@ -280,12 +308,27 @@ class MatchJudger(BaseMatchJudger):
                     container = agent_containers[i]
                     assert container is not None
 
-                    exit_code = (
-                        await asyncio.to_thread(
-                            container.wait,
-                            timeout=1,  # The shortest possible time.
+                    # Stop the agent container if it is still running.
+                    if container.status == "running":
+                        logging.debug(
+                            "Stopping agent container %s", agent_info.container_name
                         )
-                    )["StatusCode"]
+
+                        container.stop(timeout=0)
+
+                        # The agent container is stopped by the judger so we regard it as a
+                        # normal exit.
+                        exit_code = 0
+
+                    else:
+                        # Theoretically, the agent container is already stopped so we don't need to
+                        # wait for it. So we don't add a try-except block here.
+                        exit_code = (
+                            await asyncio.to_thread(
+                                container.wait,
+                                timeout=1,  # The shortest possible time.
+                            )
+                        )["StatusCode"]
 
                     agent_results.append(
                         MatchResult.AgentResult(
