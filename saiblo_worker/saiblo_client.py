@@ -43,7 +43,7 @@ class SaibloClient(BaseSaibloClient):
     async def start(self) -> None:
         async for connection in websockets.asyncio.client.connect(self._websocket_url):
             try:
-                logging.info("Connected to %s", self._websocket_url)
+                logging.info("Connected to %s as %s", self._websocket_url, self._name)
 
                 await connection.send(
                     json.dumps(
@@ -64,8 +64,9 @@ class SaibloClient(BaseSaibloClient):
                     self._keep_request_judge_task(connection),
                 )
 
-            except ConnectionClosed:
-                logging.error("Connection closed. Reconnecting...")
+            except ConnectionClosed as e:
+                logging.error("Connection closed: %s", e)
+                logging.debug("Reconnecting to %s", self._websocket_url)
                 continue
 
     async def _keep_finish_judge_task(self, connection: ClientConnection) -> None:

@@ -40,12 +40,15 @@ class TaskScheduler(BaseTaskScheduler):
         while True:
             task = await self._pending_tasks.get()
 
-            logging.info("Executing task %s", type(task).__name__)
-
             try:
+                logging.info("Executing task %s", task)
+
                 await task.execute()
+
+                logging.info("Task %s done", task)
+
             except Exception as e:  # pylint: disable=broad-except
-                logging.error("Task %s failed: %s", type(task).__name__, str(e))
+                logging.error("Task %s failed: %s", task, e)
 
             self._pending_tasks.task_done()
 

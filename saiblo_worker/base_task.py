@@ -7,6 +7,15 @@ from typing import Any, Optional
 class BaseTask(ABC):
     """Abstract base class for tasks."""
 
+    @property
+    @abstractmethod
+    def result(self) -> Optional[Any]:
+        """The task execution result."""
+
+    @abstractmethod
+    def __str__(self) -> str:
+        """Returns a string representation of the task."""
+
     @abstractmethod
     async def execute(self) -> Any:
         """Runs the task.
@@ -14,8 +23,3 @@ class BaseTask(ABC):
         Returns:
             The task execution result
         """
-
-    @property
-    @abstractmethod
-    def result(self) -> Optional[Any]:
-        """The task execution result."""

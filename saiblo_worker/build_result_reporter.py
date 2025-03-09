@@ -1,5 +1,7 @@
 """The implementation of the build result reporter."""
 
+import logging
+
 import aiohttp
 
 from saiblo_worker.base_build_result_reporter import BaseBuildResultReporter
@@ -18,6 +20,8 @@ class BuildResultReporter(BaseBuildResultReporter):
         self._session = session
 
     async def report(self, result: BuildResult) -> None:
+        logging.debug("Reporting build result for agent code %s", result.code_id)
+
         async with self._session.put(
             f"/judger/codes/{result.code_id}/",
             json={
@@ -28,3 +32,5 @@ class BuildResultReporter(BaseBuildResultReporter):
             },
         ) as response:
             response.raise_for_status()
+
+        logging.info("Build result reported for agent code %s", result.code_id)

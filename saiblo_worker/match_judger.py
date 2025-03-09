@@ -4,6 +4,7 @@ import asyncio
 import dataclasses
 import io
 import json
+import logging
 import shutil
 import tarfile
 import uuid
@@ -90,6 +91,8 @@ class MatchJudger(BaseMatchJudger):
         self._docker_client = docker.from_env()
 
     async def clean(self) -> None:
+        logging.info("Cleaning match judger environment")
+
         # Clean containers.
         for container in self._docker_client.containers.list(all=True):
             assert isinstance(container, docker.models.containers.Container)
@@ -120,12 +123,16 @@ class MatchJudger(BaseMatchJudger):
         if match_result_base_dir_path.is_dir():
             shutil.rmtree(match_result_base_dir_path, ignore_errors=True)
 
+        logging.info("Match judger environment cleaned")
+
     async def judge(
         self,
         match_id: str,
         game_host_image: str,
         agent_images: List[Optional[str]],
     ) -> MatchResult:
+        logging.info("Judging match %s", match_id)
+
         match_replay_file_path = path_manager.get_match_replay_path(match_id)
         match_replay_file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -173,6 +180,7 @@ class MatchJudger(BaseMatchJudger):
                 mem_limit=self._game_host_mem_limit,
                 name=game_host_container_name,
                 nano_cpus=self._game_host_nano_cpus,
+                network_disabled=True,
             )
 
             # Run agent containers.
@@ -197,6 +205,7 @@ class MatchJudger(BaseMatchJudger):
                     mem_limit=self._agent_mem_limit,
                     name=agent_info.container_name,
                     nano_cpus=self._agent_nano_cpus,
+                    network_disabled=True,
                 )
                 agent_containers.append(agent_container)
 
@@ -294,6 +303,8 @@ class MatchJudger(BaseMatchJudger):
             with open(match_result_file_path, "w", encoding="utf-8") as f:
                 json.dump(dataclasses.asdict(match_result), f)
 
+            logging.info("Match %s judged", match_id)
+
             return match_result
 
         except Exception as e:  # pylint: disable=broad-except
@@ -320,15 +331,6 @@ class MatchJudger(BaseMatchJudger):
             return match_result
 
         finally:
-            # Clean networks.
-            for network in self._docker_client.networks.list():
-                if network.name is not None and network.name in [
-                    agent_info.network_name
-                    for agent_info in agent_info_list
-                    if agent_info is not None
-                ]:
-                    network.remove()
-
             # Clean containers.
             for container in self._docker_client.containers.list(all=True):
                 assert isinstance(container, docker.models.containers.Container)
@@ -344,6 +346,15 @@ class MatchJudger(BaseMatchJudger):
                 ):
                     container.stop(timeout=0)
                     container.remove(v=True, force=True)
+
+            # Clean networks.
+            for network in self._docker_client.networks.list():
+                if network.name is not None and network.name in [
+                    agent_info.network_name
+                    for agent_info in agent_info_list
+                    if agent_info is not None
+                ]:
+                    network.remove()
 
     async def list(self) -> Dict[str, MatchResult]:
         match_result_paths = path_manager.get_match_result_paths()

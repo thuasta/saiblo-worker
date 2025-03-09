@@ -1,6 +1,5 @@
 """Contains the task for building agents."""
 
-import logging
 from typing import Optional
 
 from saiblo_worker.base_agent_code_fetcher import BaseAgentCodeFetcher
@@ -32,23 +31,23 @@ class BuildTask(BaseTask):
         self._builder = builder
         self._reporter = reporter
 
+    @property
+    def result(self) -> Optional[BuildResult]:
+        return self._result
+
+    def __str__(self) -> str:
+        return f"BuildTask(code_id={self._code_id})"
+
     async def execute(self) -> BuildResult:
-        logging.info("Fetching agent code %s", self._code_id)
         agent_code_tarball_path = await self._fetcher.fetch(self._code_id)
 
-        logging.info("Building agent code %s", self._code_id)
         build_result = await self._builder.build(self._code_id, agent_code_tarball_path)
 
-        logging.info("Reporting build result for agent code %s", self._code_id)
         await self._reporter.report(build_result)
 
         self._result = build_result
 
         return build_result
-
-    @property
-    def result(self) -> Optional[BuildResult]:
-        return self._result
 
 
 class BuildTaskFactory:

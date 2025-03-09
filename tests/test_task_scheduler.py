@@ -8,21 +8,27 @@ from saiblo_worker.task_scheduler import TaskScheduler
 
 
 class _TestTask(BaseTask):
-    async def execute(self) -> None:
-        pass
-
     @property
     def result(self) -> None:
+        pass
+
+    def __str__(self) -> str:
+        return "TestTask"
+
+    async def execute(self) -> None:
         pass
 
 
 class _TestTaskThrow(BaseTask):
-    async def execute(self) -> None:
-        raise RuntimeError()
-
     @property
     def result(self) -> None:
         pass
+
+    def __str__(self) -> str:
+        return "TestTaskThrow"
+
+    async def execute(self) -> None:
+        raise RuntimeError()
 
 
 class TestTaskScheduler(unittest.IsolatedAsyncioTestCase):

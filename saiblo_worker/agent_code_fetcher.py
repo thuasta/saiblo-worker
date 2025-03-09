@@ -1,6 +1,7 @@
 """The implementation of the agent code fetcher."""
 
 import io
+import logging
 import shutil
 import tarfile
 import zipfile
@@ -27,12 +28,18 @@ class AgentCodeFetcher(BaseAgentCodeFetcher):
         self._session = session
 
     async def clean(self) -> None:
+        logging.debug("Cleaning agent code")
+
         agent_code_base_dir_path = path_manager.get_agent_code_base_dir_path()
 
         if agent_code_base_dir_path.is_dir():
             shutil.rmtree(agent_code_base_dir_path, ignore_errors=True)
 
+        logging.info("Agent code cleaned")
+
     async def fetch(self, code_id: str) -> Path:
+        logging.debug("Fetching agent code %s", code_id)
+
         agent_code_tarball_path = path_manager.get_agent_code_tarball_path(code_id)
         agent_code_tarball_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -60,6 +67,8 @@ class AgentCodeFetcher(BaseAgentCodeFetcher):
                 tar_info.size = len(file_data)
 
                 tar_file.addfile(tar_info, io.BytesIO(file_data))
+
+        logging.info("Agent code %s fetched", code_id)
 
         return agent_code_tarball_path
 

@@ -2,6 +2,7 @@
 
 import base64
 import json
+import logging
 
 import aiohttp
 
@@ -20,6 +21,8 @@ class MatchResultReporter(BaseMatchResultReporter):
         self._session = session
 
     async def report(self, result: MatchResult) -> None:
+        logging.debug("Reporting match result for match %s", result.match_id)
+
         form_data = aiohttp.FormData(
             {
                 "message": json.dumps({}),
@@ -68,3 +71,5 @@ class MatchResultReporter(BaseMatchResultReporter):
             f"/judger/matches/{result.match_id}/", data=form_data
         ) as response:
             response.raise_for_status()
+
+        logging.info("Match result reported for match %s", result.match_id)

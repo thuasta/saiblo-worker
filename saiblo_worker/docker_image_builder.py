@@ -1,6 +1,7 @@
 """The implementation of the Docker image builder."""
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Dict
 
@@ -20,6 +21,8 @@ class DockerImageBuilder(BaseDockerImageBuilder):
         self._client = docker.from_env()
 
     async def build(self, code_id: str, file_path: Path) -> BuildResult:
+        logging.debug("Building agent code %s", code_id)
+
         # If built, return the image tag.
         matched_image = [
             tag
@@ -40,6 +43,8 @@ class DockerImageBuilder(BaseDockerImageBuilder):
         try:
             await asyncio.to_thread(self._build_image, file_path, tag)
 
+            logging.info("Agent code %s built", code_id)
+
             return BuildResult(
                 code_id=code_id,
                 image=tag,
@@ -54,10 +59,14 @@ class DockerImageBuilder(BaseDockerImageBuilder):
             )
 
     async def clean(self) -> None:
+        logging.debug("Cleaning images")
+
         images = self._client.images.list(_IMAGE_REPOSITORY)
 
         for image in images:
             image.remove(force=True)
+
+        logging.info("Images cleaned")
 
     async def list(self) -> Dict[str, str]:
         images = [

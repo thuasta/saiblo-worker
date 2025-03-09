@@ -1,6 +1,5 @@
 """Contains the task for judging matches."""
 
-import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -10,6 +9,7 @@ from saiblo_worker.base_docker_image_builder import BaseDockerImageBuilder
 from saiblo_worker.base_match_judger import BaseMatchJudger
 from saiblo_worker.base_match_result_reporter import BaseMatchResultReporter
 from saiblo_worker.base_task import BaseTask
+from saiblo_worker.build_result import BuildResult
 from saiblo_worker.build_task import BuildTask
 from saiblo_worker.match_result import MatchResult
 
@@ -40,6 +40,7 @@ class JudgeTask(BaseTask):
         match_result_reporter: BaseMatchResultReporter,
     ):
         self._match_id = match_id
+
         self._game_host_image_tag = game_host_image
         self._agent_code_ids = agent_code_ids
 
@@ -55,34 +56,45 @@ class JudgeTask(BaseTask):
 
         return self._match_id
 
+    @property
+    def result(self) -> Optional[MatchResult]:
+        return self._result
+
+    def __str__(self) -> str:
+        return f"JudgeTask(match_id={self._match_id})"
+
     async def execute(self) -> MatchResult:
+        cached_agent_build_results = await self._builder.list()
+
         agent_build_results = [
-            await BuildTask(
-                code_id,
-                self._fetcher,
-                self._builder,
-                self._build_result_reporter,
-            ).execute()
+            (
+                await BuildTask(
+                    code_id,
+                    self._fetcher,
+                    self._builder,
+                    self._build_result_reporter,
+                ).execute()
+                if code_id not in cached_agent_build_results
+                else BuildResult(
+                    code_id=code_id,
+                    image=cached_agent_build_results[code_id],
+                    message="",
+                )
+            )
             for code_id in self._agent_code_ids
         ]
 
-        logging.info("Judging match %s", self._match_id)
         match_result = await self._judger.judge(
             self._match_id,
             self._game_host_image_tag,
             [x.image for x in agent_build_results],
         )
 
-        logging.info("Reporting match result for match %s", self._match_id)
         await self._match_result_reporter.report(match_result)
 
         self._result = match_result
 
         return match_result
-
-    @property
-    def result(self) -> Optional[MatchResult]:
-        return self._result
 
 
 class JudgeTaskFactory:
