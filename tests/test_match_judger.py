@@ -158,7 +158,7 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
                     exit_code=0, score=0.0, status="OK", stderr_output=""
                 ),
                 MatchResult.AgentResult(
-                    exit_code=0, score=0.0, status="EXIT", stderr_output=""
+                    exit_code=0, score=0.0, status="CANCEL", stderr_output=""
                 ),
             ],
         )

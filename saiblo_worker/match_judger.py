@@ -260,7 +260,7 @@ class MatchJudger(BaseMatchJudger):
                         MatchResult.AgentResult(
                             exit_code=0,
                             score=0.0,
-                            status="EXIT",
+                            status="CANCEL",
                             stderr_output="",
                         )
                     )
@@ -268,17 +268,17 @@ class MatchJudger(BaseMatchJudger):
                     container = agent_containers[i]
                     assert container is not None
 
+                    exit_code = (await asyncio.to_thread(container.wait))["StatusCode"]
+
                     agent_results.append(
                         MatchResult.AgentResult(
-                            exit_code=(await asyncio.to_thread(container.wait))[
-                                "StatusCode"
-                            ],
+                            exit_code=exit_code,
                             score=(
                                 game_host_match_result["scores"].get(
                                     agent_info.token, 0.0
                                 )
                             ),
-                            status="OK",
+                            status="OK" if exit_code == 0 else "RE",
                             stderr_output=container.logs(stdout=False).decode("utf-8"),
                         )
                     )
@@ -303,7 +303,7 @@ class MatchJudger(BaseMatchJudger):
                     MatchResult.AgentResult(
                         exit_code=0,
                         score=0.0,
-                        status="CANCEL",
+                        status="UE",
                         stderr_output="",
                     )
                     for _ in range(len(agent_info_list))
