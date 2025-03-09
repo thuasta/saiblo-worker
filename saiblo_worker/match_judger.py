@@ -165,7 +165,8 @@ class MatchJudger(BaseMatchJudger):
 
         try:
             # Run the game host.
-            game_host_container = self._docker_client.containers.run(
+            game_host_container = await asyncio.to_thread(
+                self._docker_client.containers.run,
                 game_host_image,
                 detach=True,
                 environment={
@@ -195,7 +196,8 @@ class MatchJudger(BaseMatchJudger):
                     continue
 
                 # Create container.
-                agent_container = self._docker_client.containers.run(
+                agent_container = await asyncio.to_thread(
+                    self._docker_client.containers.run,
                     agent_info.image,
                     detach=True,
                     environment={
@@ -219,7 +221,8 @@ class MatchJudger(BaseMatchJudger):
 
             # Wait until the game host finishes or timeout.
             await asyncio.to_thread(
-                game_host_container.wait, timeout=self._judge_timeout
+                game_host_container.wait,
+                timeout=self._judge_timeout,
             )
 
             # Stop the game host and agent containers.
@@ -277,7 +280,12 @@ class MatchJudger(BaseMatchJudger):
                     container = agent_containers[i]
                     assert container is not None
 
-                    exit_code = (await asyncio.to_thread(container.wait))["StatusCode"]
+                    exit_code = (
+                        await asyncio.to_thread(
+                            container.wait,
+                            timeout=1,  # The shortest possible time.
+                        )
+                    )["StatusCode"]
 
                     agent_results.append(
                         MatchResult.AgentResult(

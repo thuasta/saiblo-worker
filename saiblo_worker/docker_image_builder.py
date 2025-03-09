@@ -18,7 +18,7 @@ class DockerImageBuilder(BaseDockerImageBuilder):
     """The Docker image builder."""
 
     def __init__(self):
-        self._client = docker.from_env()
+        self._docker_client = docker.from_env()
 
     async def build(self, code_id: str, file_path: Path) -> BuildResult:
         logging.debug("Building agent code %s", code_id)
@@ -26,7 +26,7 @@ class DockerImageBuilder(BaseDockerImageBuilder):
         # If built, return the image tag.
         matched_image = [
             tag
-            for image in self._client.images.list(_IMAGE_REPOSITORY)
+            for image in self._docker_client.images.list(_IMAGE_REPOSITORY)
             for tag in image.tags
             if tag.split(":")[-1] == code_id
         ]
@@ -41,7 +41,15 @@ class DockerImageBuilder(BaseDockerImageBuilder):
         tag = f"{_IMAGE_REPOSITORY}:{code_id}"
 
         try:
-            await asyncio.to_thread(self._build_image, file_path, tag)
+            with open(file_path, "rb") as tar_file:
+                await asyncio.to_thread(
+                    self._docker_client.images.build,
+                    fileobj=tar_file,
+                    custom_context=True,
+                    tag=tag,
+                    rm=True,
+                    forcerm=True,
+                )
 
             logging.info("Agent code %s built", code_id)
 
@@ -61,7 +69,7 @@ class DockerImageBuilder(BaseDockerImageBuilder):
     async def clean(self) -> None:
         logging.debug("Cleaning images")
 
-        images = self._client.images.list(_IMAGE_REPOSITORY)
+        images = self._docker_client.images.list(_IMAGE_REPOSITORY)
 
         for image in images:
             image.remove(force=True)
@@ -71,19 +79,9 @@ class DockerImageBuilder(BaseDockerImageBuilder):
     async def list(self) -> Dict[str, str]:
         images = [
             tag
-            for image in self._client.images.list(_IMAGE_REPOSITORY)
+            for image in self._docker_client.images.list(_IMAGE_REPOSITORY)
             for tag in image.tags
             if tag.split(":")[0] == _IMAGE_REPOSITORY
         ]
 
         return {tag.split(":")[-1]: tag for tag in images}
-
-    def _build_image(self, file_path: Path, tag: str):
-        with open(file_path, "rb") as tar_file:
-            self._client.images.build(
-                fileobj=tar_file,
-                custom_context=True,
-                tag=tag,
-                rm=True,
-                forcerm=True,
-            )
