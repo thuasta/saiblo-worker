@@ -246,6 +246,8 @@ class MatchJudger(BaseMatchJudger):
                     e.args[0],
                     urllib3.exceptions.ReadTimeoutError,
                 ):
+                    logging.error("Game host timeout for match %s", match_id)
+
                     raise TimeoutError("Game host timeout") from e
 
                 raise
@@ -359,6 +361,8 @@ class MatchJudger(BaseMatchJudger):
             return match_result
 
         except Exception as e:  # pylint: disable=broad-except
+            logging.error("Match %s judging failed: %s", match_id, e)
+
             match_result = MatchResult(
                 match_id=match_id,
                 agent_results=[

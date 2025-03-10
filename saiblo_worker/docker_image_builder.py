@@ -7,6 +7,8 @@ from typing import Dict
 
 import docker
 import docker.errors
+import requests
+import urllib3
 
 from saiblo_worker.base_docker_image_builder import BaseDockerImageBuilder
 from saiblo_worker.build_result import BuildResult
@@ -17,7 +19,16 @@ _IMAGE_REPOSITORY = "saiblo-worker-image"
 class DockerImageBuilder(BaseDockerImageBuilder):
     """The Docker image builder."""
 
-    def __init__(self):
+    _build_timeout: float
+    _docker_client: docker.DockerClient
+
+    def __init__(
+        self,
+        *,
+        build_timeout: float,
+    ):
+        self._build_timeout = build_timeout
+
         self._docker_client = docker.from_env()
 
     async def build(self, code_id: str, file_path: Path) -> BuildResult:
@@ -44,11 +55,12 @@ class DockerImageBuilder(BaseDockerImageBuilder):
             with open(file_path, "rb") as tar_file:
                 await asyncio.to_thread(
                     self._docker_client.images.build,
-                    fileobj=tar_file,
                     custom_context=True,
-                    tag=tag,
-                    rm=True,
+                    fileobj=tar_file,
                     forcerm=True,
+                    rm=True,
+                    tag=tag,
+                    timeout=1,
                 )
 
             logging.info("Agent code %s built", code_id)
@@ -60,6 +72,17 @@ class DockerImageBuilder(BaseDockerImageBuilder):
             )
 
         except Exception as e:  # pylint: disable=broad-except
+            if isinstance(e, urllib3.exceptions.ReadTimeoutError):
+                logging.error("Agent code %s build timed out", code_id)
+
+                return BuildResult(
+                    code_id=code_id,
+                    image=None,
+                    message="Build timed out",
+                )
+
+            logging.error("Failed to build agent code %s: %s", code_id, e)
+
             return BuildResult(
                 code_id=code_id,
                 image=None,

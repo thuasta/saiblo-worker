@@ -42,16 +42,20 @@ docker build -t saiblo-worker .
 
 The following environment variables control the worker's behavior:
 
+- `NAME`: Worker identifier (**required**)
+
+- `AGENT_BUILD_TIMEOUT`: Agent build timeout in seconds (default: `300`)
 - `AGENT_CPUS`: Agent container CPU allocation (default: `0.5`)
 - `AGENT_MEM_LIMIT`: Agent container memory limit (default: `1g`)
-- `GAME_HOST_CPUS`: Game host container CPU allocation (default: `1`)
+
 - `GAME_HOST_IMAGE`: Game host container image name (**required**)
+- `GAME_HOST_CPUS`: Game host container CPU allocation (default: `1`)
 - `GAME_HOST_MEM_LIMIT`: Game host container memory limit (default: `1g`)
+
 - `HTTP_BASE_URL`: API endpoint base URL (default: `https://api.dev.saiblo.net`)
+- `WEBSOCKET_URL`: Saiblo WebSocket endpoint (default: `wss://api.dev.saiblo.net/ws/`)
 - `JUDGE_TIMEOUT`: Match duration limit in seconds (default: `600`)
 - `LOGGING_LEVEL`: Logging verbosity level (default: `INFO`)
-- `NAME`: Worker identifier (**required**)
-- `WEBSOCKET_URL`: Saiblo WebSocket endpoint (default: `wss://api.dev.saiblo.net/ws/`)
 
 ### Container Setup
 

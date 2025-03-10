@@ -25,6 +25,8 @@ async def main():
     # Load environment variables.
     dotenv.load_dotenv()
 
+    agent_build_timeout = float(os.getenv("AGENT_BUILD_TIMEOUT", "300"))
+
     agent_cpus = float(os.getenv("AGENT_CPUS", "0.5"))
 
     agent_mem_limit = os.getenv("AGENT_MEM_LIMIT", "1g")
@@ -60,13 +62,13 @@ async def main():
         task_scheduler,
         BuildTaskFactory(
             AgentCodeFetcher(session),
-            DockerImageBuilder(),
+            DockerImageBuilder(build_timeout=agent_build_timeout),
             BuildResultReporter(session),
         ),
         JudgeTaskFactory(
             game_host_image,
             AgentCodeFetcher(session),
-            DockerImageBuilder(),
+            DockerImageBuilder(build_timeout=agent_build_timeout),
             BuildResultReporter(session),
             MatchJudger(
                 agent_cpus=agent_cpus,
