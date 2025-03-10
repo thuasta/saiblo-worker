@@ -19,13 +19,13 @@ _IMAGE_REPOSITORY = "saiblo-worker-image"
 class DockerImageBuilder(BaseDockerImageBuilder):
     """The Docker image builder."""
 
-    _build_timeout: float
+    _build_timeout: int
     _docker_client: docker.DockerClient
 
     def __init__(
         self,
         *,
-        build_timeout: float,
+        build_timeout: int,
     ):
         self._build_timeout = build_timeout
 
@@ -60,7 +60,7 @@ class DockerImageBuilder(BaseDockerImageBuilder):
                     forcerm=True,
                     rm=True,
                     tag=tag,
-                    timeout=1,
+                    timeout=self._build_timeout,
                 )
 
             logging.info("Agent code %s built", code_id)

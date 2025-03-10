@@ -25,7 +25,7 @@ async def main():
     # Load environment variables.
     dotenv.load_dotenv()
 
-    agent_build_timeout = float(os.getenv("AGENT_BUILD_TIMEOUT", "300"))
+    agent_build_timeout = int(os.getenv("AGENT_BUILD_TIMEOUT", "300"))
 
     agent_cpus = float(os.getenv("AGENT_CPUS", "0.5"))
 
