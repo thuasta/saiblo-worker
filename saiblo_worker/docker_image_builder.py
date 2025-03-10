@@ -7,7 +7,6 @@ from typing import Dict
 
 import docker
 import docker.errors
-import requests
 import urllib3
 
 from saiblo_worker.base_docker_image_builder import BaseDockerImageBuilder
