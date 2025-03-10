@@ -37,7 +37,7 @@ class TestJudgeTask(unittest.IsolatedAsyncioTestCase):
         self._judge_task_factory = JudgeTaskFactory(
             "saiblo-worker-image:game-host",
             AgentCodeFetcher(self._session),
-            DockerImageBuilder(),
+            DockerImageBuilder(build_timeout=60),
             BuildResultReporter(self._session),
             MatchJudger(
                 agent_mem_limit="1g",

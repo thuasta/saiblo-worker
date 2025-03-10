@@ -40,7 +40,7 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         # Arrange.
         image = self._docker_client.images.pull("hello-world")
         image.tag("saiblo-worker-image", "code_id")
-        builder = DockerImageBuilder()
+        builder = DockerImageBuilder(build_timeout=60)
 
         # Act.
         result = await builder.build("code_id", pathlib.Path())
@@ -56,7 +56,7 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         path = pathlib.Path("data/agent_code/code_id.tar")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
-        builder = DockerImageBuilder()
+        builder = DockerImageBuilder(build_timeout=60)
 
         # Act.
         result = await builder.build("code_id", path)
@@ -76,7 +76,7 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         tar_info.size = len(dockerfile_bytes)
         with tarfile.open(path, "w") as tar:
             tar.addfile(tar_info, io.BytesIO(dockerfile_bytes))
-        builder = DockerImageBuilder()
+        builder = DockerImageBuilder(build_timeout=60)
 
         # Act.
         result = await builder.build("code_id", path)
@@ -92,7 +92,7 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         # Arrange.
         image = self._docker_client.images.pull("hello-world")
         image.tag("saiblo-worker-image", "code_id")
-        builder = DockerImageBuilder()
+        builder = DockerImageBuilder(build_timeout=60)
 
         # Act.
         await builder.clean()
@@ -105,7 +105,7 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         # Arrange.
         image = self._docker_client.images.pull("hello-world")
         image.tag("saiblo-worker-image", "code_id")
-        builder = DockerImageBuilder()
+        builder = DockerImageBuilder(build_timeout=60)
 
         # Act.
         result = await builder.list()

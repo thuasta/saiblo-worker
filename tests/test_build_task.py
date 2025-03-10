@@ -30,7 +30,7 @@ class TestBuildTask(unittest.IsolatedAsyncioTestCase):
 
         self._build_task_factory = BuildTaskFactory(
             AgentCodeFetcher(self._session),
-            DockerImageBuilder(),
+            DockerImageBuilder(build_timeout=60),
             BuildResultReporter(self._session),
         )
 
