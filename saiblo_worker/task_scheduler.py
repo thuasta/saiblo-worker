@@ -48,7 +48,7 @@ class TaskScheduler(BaseTaskScheduler):
                 logging.info("Task %s done", task)
 
             except Exception as e:  # pylint: disable=broad-except
-                logging.error("Task %s failed: %s", task, e)
+                logging.error("Task %s failed: (%s) %s", task, type(e), e)
 
             self._pending_tasks.task_done()
 

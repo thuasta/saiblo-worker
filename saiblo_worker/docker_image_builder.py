@@ -76,7 +76,7 @@ class DockerImageBuilder(BaseDockerImageBuilder):
             )
 
         except Exception as e:  # pylint: disable=broad-except
-            logging.error("Failed to build agent code %s: %s", code_id, e)
+            logging.error("Failed to build agent code %s: (%s) %s", code_id, type(e), e)
 
             return BuildResult(
                 code_id=code_id,

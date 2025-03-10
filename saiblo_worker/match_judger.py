@@ -15,7 +15,6 @@ import dacite
 import docker
 import docker.models.containers
 import docker.models.networks
-import requests
 import urllib3
 
 import saiblo_worker.path_manager as path_manager
@@ -355,7 +354,7 @@ class MatchJudger(BaseMatchJudger):
             return match_result
 
         except Exception as e:  # pylint: disable=broad-except
-            logging.error("Match %s judging failed: %s", match_id, e)
+            logging.error("Match %s judging failed: (%s) %s", match_id, type(e), e)
 
             match_result = MatchResult(
                 match_id=match_id,
