@@ -52,15 +52,20 @@ class DockerImageBuilder(BaseDockerImageBuilder):
 
         try:
             with open(file_path, "rb") as tar_file:
-                await asyncio.to_thread(
-                    self._docker_client.images.build,
-                    custom_context=True,
-                    fileobj=tar_file,
-                    forcerm=True,
-                    rm=True,
-                    tag=tag,
-                    timeout=self._build_timeout,
-                )
+                try:
+                    await asyncio.to_thread(
+                        self._docker_client.images.build,
+                        custom_context=True,
+                        fileobj=tar_file,
+                        forcerm=True,
+                        rm=True,
+                        tag=tag,
+                        timeout=self._build_timeout,
+                    )
+                except urllib3.exceptions.TimeoutError as exc:
+                    logging.error("Timeout when building agent code %s", code_id)
+
+                    raise TimeoutError("Timeout when building agent code") from exc
 
             logging.info("Agent code %s built", code_id)
 
@@ -71,15 +76,6 @@ class DockerImageBuilder(BaseDockerImageBuilder):
             )
 
         except Exception as e:  # pylint: disable=broad-except
-            if isinstance(e, urllib3.exceptions.ReadTimeoutError):
-                logging.error("Agent code %s build timed out", code_id)
-
-                return BuildResult(
-                    code_id=code_id,
-                    image=None,
-                    message="Build timed out",
-                )
-
             logging.error("Failed to build agent code %s: %s", code_id, e)
 
             return BuildResult(

@@ -241,16 +241,10 @@ class MatchJudger(BaseMatchJudger):
                     game_host_container.wait,
                     timeout=self._judge_timeout,
                 )
-            except requests.exceptions.ConnectionError as e:
-                if len(e.args) == 1 and isinstance(
-                    e.args[0],
-                    urllib3.exceptions.ReadTimeoutError,
-                ):
-                    logging.error("Game host timeout for match %s", match_id)
+            except urllib3.exceptions.TimeoutError as exc:
+                logging.error("Timeout when judging match %s", match_id)
 
-                    raise TimeoutError("Game host timeout") from e
-
-                raise
+                raise TimeoutError("Timeout when judging match") from exc
 
             # Stop the game host and agent containers.
             # For game host, we give it some time after SIGTERM to write the result file.
