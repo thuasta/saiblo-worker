@@ -87,6 +87,26 @@ class TestDockerImageBuilder(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.message, "")
         self.assertEqual(len(self._docker_client.images.list("saiblo-worker-image")), 1)
 
+    async def test_build_timeout(self):
+        """Test build() when the build times out."""
+        # Arrange.
+        path = pathlib.Path("data/agent_code/code_id.tar")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        dockerfile_bytes = b"FROM busybox\nRUN sleep 60\n"
+        tar_info = tarfile.TarInfo("Dockerfile")
+        tar_info.size = len(dockerfile_bytes)
+        with tarfile.open(path, "w") as tar:
+            tar.addfile(tar_info, io.BytesIO(dockerfile_bytes))
+        builder = DockerImageBuilder(build_timeout=1)
+
+        # Act.
+        result = await builder.build("code_id", path)
+
+        # Assert.
+        self.assertEqual(result.code_id, "code_id")
+        self.assertEqual(result.image, None)
+        self.assertNotEqual(result.message, "")
+
     async def test_clean(self):
         """Test clean()."""
         # Arrange.

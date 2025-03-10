@@ -116,6 +116,86 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(result.error_message, "")
         self.assertEqual(result.replay_file_path, None)
 
+    async def test_judge_game_host_timeout(self):
+        """Test judge() when the game host times out."""
+        # Arrange.
+
+        # Build the game host image.
+        with tempfile.TemporaryDirectory("w") as dir_path:
+            with open(f"{dir_path}/Dockerfile", "wb") as file:
+                file.write(b"FROM busybox\nCMD sleep 60\n")
+
+            self._docker_client.images.build(
+                path=dir_path,
+                tag="saiblo-worker-test",
+            )
+
+        match_judger = MatchJudger(
+            agent_mem_limit="1g",
+            agent_cpus=1,
+            game_host_mem_limit="1g",
+            game_host_cpus=1,
+            judge_timeout=1,
+        )
+
+        # Act.
+        result = await match_judger.judge("match_id", "saiblo-worker-test", [])
+
+        # Assert.
+        self.assertEqual(result.match_id, "match_id")
+        self.assertEqual(result.agent_results, [])
+        self.assertNotEqual(result.error_message, "")
+        self.assertEqual(result.replay_file_path, None)
+
+    async def test_judge_agent_still_running(self):
+        """Test judge() when the agent is still running."""
+        # Arrange.
+
+        # Build the game host image.
+        with tempfile.TemporaryDirectory("w") as dir_path:
+            with open(f"{dir_path}/Dockerfile", "wb") as file:
+                file.write(
+                    b"FROM hello-world\nCOPY result.json /app/data/result.json\n"
+                    b"COPY replay.dat /app/data/replay.dat\n"
+                )
+            with open(f"{dir_path}/result.json", "w", encoding="utf-8") as file:
+                json.dump({"scores": {}}, file)
+            with open(f"{dir_path}/replay.dat", "wb") as file:
+                file.write(b"")
+            self._docker_client.images.build(
+                path=dir_path,
+                tag="saiblo-worker-test",
+            )
+
+        with tempfile.TemporaryDirectory("w") as dir_path:
+            with open(f"{dir_path}/Dockerfile", "wb") as file:
+                file.write(b"FROM busybox\nCMD sleep 60\n")
+
+            self._docker_client.images.build(
+                path=dir_path,
+                tag="saiblo-worker-test-agent",
+            )
+
+        match_judger = MatchJudger(
+            agent_mem_limit="1g",
+            agent_cpus=1,
+            game_host_mem_limit="1g",
+            game_host_cpus=1,
+            judge_timeout=60,
+        )
+
+        # Act.
+        result = await match_judger.judge(
+            "match_id", "saiblo-worker-test", ["saiblo-worker-test-agent"]
+        )
+
+        # Assert.
+        self.assertEqual(result.match_id, "match_id")
+        self.assertEqual(len(result.agent_results), 1)
+        self.assertEqual(result.agent_results[0].exit_code, 0)
+        self.assertEqual(result.error_message, "")
+        self.assertEqual(result.replay_file_path, "data/match_replays/match_id.dat")
+
     async def test_judge_normal(self):
         """Test judge() when everything is normal."""
         # Arrange.
@@ -248,21 +328,19 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
         )
 
         for network in self._docker_client.networks.list():
-            if network.name is not None and (
-                network.name.startswith("saiblo-worker-network-")
-                or network.name.startswith("saiblo-worker-test-")
-            ):
+            if network.name is not None and network.name.startswith("saiblo-worker-"):
                 network.remove()
 
         for container in self._docker_client.containers.list(all=True):
             assert isinstance(container, docker.models.containers.Container)
-            if container.name is not None and (
-                container.name.startswith("saiblo-worker-agent-")
-                or container.name.startswith("saiblo-worker-game-host-")
-                or container.name.startswith("saiblo-worker-test-")
+            if container.name is not None and container.name.startswith(
+                "saiblo-worker-"
             ):
                 container.stop(timeout=0)
                 container.remove(v=True, force=True)
 
-        for image in self._docker_client.images.list("saiblo-worker-test"):
-            image.remove(force=True)
+        for image in self._docker_client.images.list():
+            if image.tags is not None and any(
+                tag.startswith("saiblo-worker-") for tag in image.tags
+            ):
+                image.remove(force=True)

@@ -15,6 +15,7 @@ import dacite
 import docker
 import docker.models.containers
 import docker.models.networks
+import requests
 import urllib3
 
 import saiblo_worker.path_manager as path_manager
@@ -240,16 +241,20 @@ class MatchJudger(BaseMatchJudger):
                     game_host_container.wait,
                     timeout=self._judge_timeout,
                 )
-            except urllib3.exceptions.TimeoutError as exc:
-                logging.error("Timeout when judging match %s", match_id)
+            except requests.exceptions.ConnectionError as exc:
+                if len(exc.args) == 1 and isinstance(
+                    exc.args[0], urllib3.exceptions.ReadTimeoutError
+                ):
+                    logging.error("Game host timeout for match %s", match_id)
 
-                raise TimeoutError("Timeout when judging match") from exc
+                    raise TimeoutError("Game host timeout") from exc
+
+                raise
 
             # Stop the game host and agent containers.
-            # For game host, we give it some time after SIGTERM to write the result file.
             logging.debug("Stopping game host container %s", game_host_container_name)
 
-            game_host_container.stop()
+            game_host_container.stop(timeout=0)
 
             # Get and save the result and the replay file.
             logging.debug(
@@ -303,6 +308,9 @@ class MatchJudger(BaseMatchJudger):
                     container = agent_containers[i]
                     assert container is not None
 
+                    # Reload attributes of the container.
+                    container.reload()
+
                     # Stop the agent container if it is still running.
                     if container.status == "running":
                         logging.debug(
@@ -353,8 +361,8 @@ class MatchJudger(BaseMatchJudger):
 
             return match_result
 
-        except Exception as e:  # pylint: disable=broad-except
-            logging.error("Match %s judging failed: (%s) %s", match_id, type(e), e)
+        except Exception as exc:  # pylint: disable=broad-except
+            logging.error("Match %s judging failed: (%s) %s", match_id, type(exc), exc)
 
             match_result = MatchResult(
                 match_id=match_id,
@@ -367,7 +375,7 @@ class MatchJudger(BaseMatchJudger):
                     )
                     for _ in range(len(agent_info_list))
                 ],
-                error_message=str(e),
+                error_message=str(exc),
                 replay_file_path=None,
                 stderr_output=(
                     game_host_container.logs(stdout=False).decode("utf-8")
