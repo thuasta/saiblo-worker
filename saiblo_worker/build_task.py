@@ -1,5 +1,6 @@
 """Contains the task for building agents."""
 
+import logging
 from typing import Optional
 
 from saiblo_worker.base_agent_code_fetcher import BaseAgentCodeFetcher
@@ -39,9 +40,25 @@ class BuildTask(BaseTask):
         return f"BuildTask(code_id={self._code_id})"
 
     async def execute(self) -> BuildResult:
-        agent_code_tarball_path = await self._fetcher.fetch(self._code_id)
+        build_result: Optional[BuildResult] = None
 
-        build_result = await self._builder.build(self._code_id, agent_code_tarball_path)
+        try:
+            agent_code_tarball_path = await self._fetcher.fetch(self._code_id)
+
+            build_result = await self._builder.build(
+                self._code_id, agent_code_tarball_path
+            )
+
+        except Exception as e:  # pylint: disable=broad-except
+            logging.error(
+                "Failed to build agent code %s: (%s) %s", self._code_id, type(e), e
+            )
+
+            build_result = BuildResult(
+                code_id=self._code_id,
+                image=None,
+                message=str(e),
+            )
 
         await self._reporter.report(build_result)
 

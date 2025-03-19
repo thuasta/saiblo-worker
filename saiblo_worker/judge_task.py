@@ -64,31 +64,51 @@ class JudgeTask(BaseTask):
         return f"JudgeTask(match_id={self._match_id})"
 
     async def execute(self) -> MatchResult:
-        cached_agent_build_results = await self._builder.list()
+        match_result: Optional[MatchResult] = None
 
-        agent_build_results = [
-            (
-                await BuildTask(
-                    code_id,
-                    self._fetcher,
-                    self._builder,
-                    self._build_result_reporter,
-                ).execute()
-                if code_id not in cached_agent_build_results
-                else BuildResult(
-                    code_id=code_id,
-                    image=cached_agent_build_results[code_id],
-                    message="",
+        try:
+            cached_agent_build_results = await self._builder.list()
+
+            agent_build_results = [
+                (
+                    await BuildTask(
+                        code_id,
+                        self._fetcher,
+                        self._builder,
+                        self._build_result_reporter,
+                    ).execute()
+                    if code_id not in cached_agent_build_results
+                    else BuildResult(
+                        code_id=code_id,
+                        image=cached_agent_build_results[code_id],
+                        message="",
+                    )
                 )
-            )
-            for code_id in self._agent_code_ids
-        ]
+                for code_id in self._agent_code_ids
+            ]
 
-        match_result = await self._judger.judge(
-            self._match_id,
-            self._game_host_image_tag,
-            [x.image for x in agent_build_results],
-        )
+            match_result = await self._judger.judge(
+                self._match_id,
+                self._game_host_image_tag,
+                [x.image for x in agent_build_results],
+            )
+
+        except Exception as e:  # pylint: disable=broad-except
+            match_result = MatchResult(
+                match_id=self._match_id,
+                agent_results=[
+                    MatchResult.AgentResult(
+                        exit_code=0,
+                        score=0.0,
+                        status="UE",
+                        stderr_output="",
+                    )
+                    for _ in self._agent_code_ids
+                ],
+                error_message=str(e),
+                replay_file_path=None,
+                stderr_output="",
+            )
 
         await self._match_result_reporter.report(match_result)
 
