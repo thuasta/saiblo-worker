@@ -185,7 +185,6 @@ class MatchJudger(BaseMatchJudger):
                 mem_limit=self._game_host_mem_limit,
                 name=game_host_container_name,
                 nano_cpus=self._game_host_nano_cpus,
-                network_disabled=True,
             )
 
             # Run agent containers.
@@ -198,6 +197,20 @@ class MatchJudger(BaseMatchJudger):
                     agent_containers.append(None)
                     agent_networks.append(None)
                     continue
+
+                # Create network.
+                logging.debug(
+                    "Creating network %s for agent %s",
+                    agent_info.network_name,
+                    agent_info.container_name,
+                )
+
+                agent_network = self._docker_client.networks.create(
+                    agent_info.network_name,
+                    internal=True,
+                )
+                agent_network.connect(game_host_container_name)
+                agent_networks.append(agent_network)
 
                 # Run the agent.
                 logging.debug("Running agent container %s", agent_info.container_name)
@@ -213,23 +226,9 @@ class MatchJudger(BaseMatchJudger):
                     mem_limit=self._agent_mem_limit,
                     name=agent_info.container_name,
                     nano_cpus=self._agent_nano_cpus,
-                    network_disabled=True,
+                    network=agent_info.network_name,
                 )
                 agent_containers.append(agent_container)
-
-                # Create network.
-                logging.debug(
-                    "Creating network %s for agent %s",
-                    agent_info.network_name,
-                    agent_info.container_name,
-                )
-
-                agent_network = self._docker_client.networks.create(
-                    agent_info.network_name
-                )
-                agent_network.connect(game_host_container_name)
-                agent_network.connect(agent_info.container_name)
-                agent_networks.append(agent_network)
 
             # Wait until the game host finishes or timeout.
             logging.debug(
