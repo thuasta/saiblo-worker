@@ -27,4 +27,4 @@ EOF
 
 touch data/replay.dat
 
-sleep 10
+sleep 60

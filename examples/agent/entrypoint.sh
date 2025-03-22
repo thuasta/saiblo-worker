@@ -3,4 +3,4 @@
 echo "TOKEN=$TOKEN"
 echo "GAME_HOST=$GAME_HOST"
 
-sleep 10
+sleep 60
