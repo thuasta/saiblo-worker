@@ -57,6 +57,7 @@ jobs:
 
       - run: |
           python -m pylint -v $(git ls-files '*.py')
+          python -m isort --check --diff $(git ls-files '*.py')
 
   build-example-docker-image:
     runs-on: ubuntu-latest
