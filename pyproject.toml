@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "saiblo-worker"
+version = "0.4.4"
+dependencies = [
+    "aiohttp==3.11.14",
+    "dacite==1.9.2",
+    "docker==7.1.0",
+    "isort==6.0.1",
+    "pylint==3.3.4",
+    "python-dotenv==1.0.1",
+    "requests==2.32.3",
+    "urllib3==2.3.0",
+    "websockets==15.0.1",
+    "yarl==1.18.3",
+]
+requires-python = ">=3.12"
