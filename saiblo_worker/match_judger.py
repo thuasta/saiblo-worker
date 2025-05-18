@@ -341,7 +341,9 @@ class MatchJudger(BaseMatchJudger):
                                 )
                             ),
                             status="OK" if exit_code == 0 else "RE",
-                            stderr_output=container.logs(stdout=False).decode("utf-8"),
+                            stderr_output=container.logs(stdout=False)[
+                                -(512 * 1024) :
+                            ].decode("utf-8"),
                         )
                     )
 
