@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.5] - 2025-05-18
+
+### Fixed
+
+- May uploading too long stderr output to Saiblo.
+
 ## [0.4.4] - 2025-03-22
 
 ### Fixed
@@ -78,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 First version
 
+[0.4.5]: https://github.com/thuasta/saiblo-worker/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/thuasta/saiblo-worker/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/thuasta/saiblo-worker/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/thuasta/saiblo-worker/compare/v0.4.1...v0.4.2
