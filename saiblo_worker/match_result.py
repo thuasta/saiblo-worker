@@ -32,11 +32,11 @@ class MatchResult:
         status: Literal[
             "OK", "RE", "TLE", "MLE", "OLE", "STLE", "EXIT", "UE", "CANCEL", "IA"
         ]
-        stderr_output: str
+        stderr_output: bytes
 
     match_id: str
 
     agent_results: List[AgentResult]
     error_message: str
     replay_file_path: Optional[str]
-    stderr_output: str
+    stderr_output: bytes

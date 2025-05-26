@@ -235,10 +235,10 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
             result.agent_results,
             [
                 MatchResult.AgentResult(
-                    exit_code=0, score=0.0, status="OK", stderr_output=""
+                    exit_code=0, score=0.0, status="OK", stderr_output="".encode()
                 ),
                 MatchResult.AgentResult(
-                    exit_code=0, score=0.0, status="CANCEL", stderr_output=""
+                    exit_code=0, score=0.0, status="CANCEL", stderr_output="".encode()
                 ),
             ],
         )
@@ -258,7 +258,7 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
             agent_results=[],
             error_message="error_message",
             replay_file_path=None,
-            stderr_output="stderr_output",
+            stderr_output="stderr_output".encode(),
         )
         match_result_path = pathlib.Path("data/match_results/match_id.json")
         match_result_path.parent.mkdir(parents=True, exist_ok=True)
@@ -290,7 +290,7 @@ class TestMatchJudger(unittest.IsolatedAsyncioTestCase):
             agent_results=[],
             error_message="error_message",
             replay_file_path=None,
-            stderr_output="stderr_output",
+            stderr_output="stderr_output".encode(),
         )
         path = pathlib.Path("data/match_results/match_id.json")
         path.parent.mkdir(parents=True, exist_ok=True)

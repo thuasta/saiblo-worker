@@ -44,18 +44,18 @@ class TestMatchResultReporter(unittest.IsolatedAsyncioTestCase):
                     exit_code=0,
                     score=0,
                     status="OK",
-                    stderr_output="stderr_output 0",
+                    stderr_output="stderr_output 0".encode(),
                 ),
                 MatchResult.AgentResult(
                     exit_code=1,
                     score=1,
                     status="UE",
-                    stderr_output="stderr_output 1",
+                    stderr_output="stderr_output 1".encode(),
                 ),
             ],
             error_message="error_message",
             replay_file_path=None,
-            stderr_output="stderr_output",
+            stderr_output="stderr_output".encode(),
         )
         reporter = MatchResultReporter(self._session)
 
@@ -76,18 +76,18 @@ class TestMatchResultReporter(unittest.IsolatedAsyncioTestCase):
                     exit_code=0,
                     score=0,
                     status="OK",
-                    stderr_output="stderr_output 0",
+                    stderr_output="stderr_output 0".encode(),
                 ),
                 MatchResult.AgentResult(
                     exit_code=1,
                     score=1,
                     status="UE",
-                    stderr_output="stderr_output 1",
+                    stderr_output="stderr_output 1".encode(),
                 ),
             ],
             error_message="error_message",
             replay_file_path=str(path),
-            stderr_output="stderr_output",
+            stderr_output="stderr_output".encode(),
         )
         reporter = MatchResultReporter(self._session)
 
