@@ -36,7 +36,7 @@ class MatchResultReporter(BaseMatchResultReporter):
                             "status": agent_result.status,
                             "code": agent_result.exit_code,
                             "stderr": base64.b64encode(
-                                agent_result.stderr_output.encode()
+                                agent_result.stderr_output
                             ).decode(),
                         }
                         for i, agent_result in enumerate(result.agent_results)
@@ -61,9 +61,7 @@ class MatchResultReporter(BaseMatchResultReporter):
             )
 
         else:
-            form_data.add_field(
-                "err", base64.b64encode(result.stderr_output.encode()).decode()
-            )
+            form_data.add_field("err", base64.b64encode(result.stderr_output).decode())
             form_data.add_field("error", result.error_message)
             form_data.add_field("file", b"", filename=replay_file_name)
 

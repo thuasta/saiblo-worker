@@ -75,7 +75,7 @@ class TestJudgeTask(unittest.IsolatedAsyncioTestCase):
             agent_results=[],
             error_message="error_message",
             replay_file_path=None,
-            stderr_output="stderr_output",
+            stderr_output="stderr_output".encode(),
         )
         match_result_path = pathlib.Path(f"data/match_results/{MATCH_ID}.json")
         match_result_path.parent.mkdir(parents=True, exist_ok=True)

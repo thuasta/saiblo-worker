@@ -300,7 +300,7 @@ class MatchJudger(BaseMatchJudger):
                             exit_code=0,
                             score=0.0,
                             status="CANCEL",
-                            stderr_output="",
+                            stderr_output=bytes(),
                         )
                     )
                 else:
@@ -341,9 +341,7 @@ class MatchJudger(BaseMatchJudger):
                                 )
                             ),
                             status="OK" if exit_code == 0 else "RE",
-                            stderr_output=container.logs(stdout=False)[
-                                -(512 * 1024) :
-                            ].decode("utf-8"),
+                            stderr_output=container.logs(stdout=False)[-(512 * 1024) :],
                         )
                     )
 
@@ -352,7 +350,7 @@ class MatchJudger(BaseMatchJudger):
                 agent_results=agent_results,
                 error_message="",
                 replay_file_path=str(match_replay_file_path),
-                stderr_output=game_host_container.logs(stdout=False).decode("utf-8"),
+                stderr_output=game_host_container.logs(stdout=False),
             )
 
             with open(match_result_file_path, "w", encoding="utf-8") as f:
@@ -372,16 +370,16 @@ class MatchJudger(BaseMatchJudger):
                         exit_code=0,
                         score=0.0,
                         status="UE",
-                        stderr_output="",
+                        stderr_output=bytes(),
                     )
                     for _ in range(len(agent_info_list))
                 ],
                 error_message=str(exc),
                 replay_file_path=None,
                 stderr_output=(
-                    game_host_container.logs(stdout=False).decode("utf-8")
+                    game_host_container.logs(stdout=False)
                     if game_host_container is not None
-                    else ""
+                    else bytes()
                 ),
             )
 

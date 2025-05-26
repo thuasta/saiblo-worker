@@ -101,13 +101,13 @@ class JudgeTask(BaseTask):
                         exit_code=0,
                         score=0.0,
                         status="UE",
-                        stderr_output="",
+                        stderr_output=bytes(),
                     )
                     for _ in self._agent_code_ids
                 ],
                 error_message=str(e),
                 replay_file_path=None,
-                stderr_output="",
+                stderr_output=bytes(),
             )
 
         await self._match_result_reporter.report(match_result)
